@@ -15,6 +15,7 @@ def test_registry_list_adapters():
     adapters = list_adapters()
     assert "moshi" in adapters
     assert "energy_vad" in adapters
+    assert "openai_realtime" in adapters
 
 
 def test_registry_get_task():
@@ -27,6 +28,10 @@ def test_registry_get_adapter():
     adapter_cls = get_adapter("energy_vad")
     assert issubclass(adapter_cls, FDModelAdapter)
     assert adapter_cls.__name__ == "EnergyVADAdapter"
+
+    adapter_cls_rt = get_adapter("openai_realtime")
+    assert issubclass(adapter_cls_rt, FDModelAdapter)
+    assert adapter_cls_rt.__name__ == "OpenAIRealtimeAdapter"
 
 
 def test_registry_missing_task():

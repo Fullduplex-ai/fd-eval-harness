@@ -1,0 +1,809 @@
+<!DOCTYPE html>
+<html lang="en" class="dark">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>fd-eval-harness · Console</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;600&display=swap" />
+  <style>
+    :root { color-scheme: dark; }
+    html, body { font-family: 'Inter', system-ui, -apple-system, sans-serif; }
+    .font-mono { font-family: 'JetBrains Mono', ui-monospace, monospace; }
+
+    /* subtle grid backdrop */
+    body::before {
+      content: "";
+      position: fixed;
+      inset: 0;
+      background:
+        linear-gradient(rgba(255,255,255,0.018) 1px, transparent 1px) 0 0/40px 40px,
+        linear-gradient(90deg, rgba(255,255,255,0.018) 1px, transparent 1px) 0 0/40px 40px;
+      pointer-events: none;
+      z-index: 0;
+    }
+    body::after {
+      content: "";
+      position: fixed;
+      inset: 0;
+      background: radial-gradient(1000px 600px at 20% -10%, rgba(45, 212, 191, 0.08), transparent 70%),
+                  radial-gradient(800px 500px at 85% 110%, rgba(14, 165, 233, 0.07), transparent 70%);
+      pointer-events: none;
+      z-index: 0;
+    }
+    main, header, footer { position: relative; z-index: 1; }
+
+    .spinner { animation: spin 0.9s linear infinite; }
+    @keyframes spin { to { transform: rotate(360deg); } }
+    .fade-in { animation: fade-in 0.35s cubic-bezier(.2,.8,.2,1); }
+    @keyframes fade-in { from { opacity: 0; transform: translateY(4px);} to { opacity: 1; transform: translateY(0);} }
+
+    .score-bg { background: conic-gradient(from 270deg, #2dd4bf var(--pct), #27272a var(--pct)); }
+    .score-bg-low  { background: conic-gradient(from 270deg, #f59e0b var(--pct), #27272a var(--pct)); }
+    .score-bg-bad  { background: conic-gradient(from 270deg, #ef4444 var(--pct), #27272a var(--pct)); }
+
+    details > summary { list-style: none; cursor: pointer; }
+    details > summary::-webkit-details-marker { display: none; }
+    details[open] .caret { transform: rotate(90deg); }
+    .caret { transition: transform 0.18s ease; display: inline-block; }
+
+    pre.codeblock {
+      background: #09090b;
+      border: 1px solid #27272a;
+      border-radius: 0.5rem;
+      padding: 0.85rem 1rem;
+      max-height: 320px;
+      overflow: auto;
+      font-size: 12px;
+      line-height: 1.55;
+    }
+    .chip { display: inline-flex; align-items: center; gap: 0.35rem; padding: 0.15rem 0.55rem; border-radius: 9999px; font-size: 11px; font-weight: 500; font-family: 'JetBrains Mono', monospace; }
+    .chip-teal   { background: rgba(45,212,191,0.12); color: #5eead4; border: 1px solid rgba(45,212,191,0.25); }
+    .chip-amber  { background: rgba(245,158,11,0.12); color: #fbbf24; border: 1px solid rgba(245,158,11,0.25); }
+    .chip-rose   { background: rgba(244, 63, 94, 0.12); color: #fda4af; border: 1px solid rgba(244,63,94,0.25); }
+    .chip-zinc   { background: rgba(113,113,122,0.12); color: #d4d4d8; border: 1px solid rgba(113,113,122,0.3); }
+    .chip-sky    { background: rgba(14,165,233,0.12); color: #7dd3fc; border: 1px solid rgba(14,165,233,0.25); }
+    .chip-violet { background: rgba(139,92,246,0.12); color: #c4b5fd; border: 1px solid rgba(139,92,246,0.25); }
+
+    /* Waveform bars */
+    .wf-bar { background: linear-gradient(to top, #0d9488, #2dd4bf); }
+    .wf-bar-muted { background: #3f3f46; }
+  </style>
+</head>
+<body class="bg-zinc-950 text-zinc-100 min-h-screen antialiased">
+
+<header class="border-b border-zinc-800/80 backdrop-blur bg-zinc-950/80 sticky top-0 z-20">
+  <div class="max-w-7xl mx-auto px-6 py-4 flex items-center justify-between">
+    <div class="flex items-center gap-3">
+      <div class="w-9 h-9 rounded-lg bg-gradient-to-br from-teal-400 to-cyan-600 grid place-items-center shadow-lg shadow-teal-500/20">
+        <span class="font-mono text-[11px] text-zinc-950 font-bold tracking-tighter">fd</span>
+      </div>
+      <div>
+        <div class="font-semibold tracking-tight">fd-eval-harness</div>
+        <div class="text-[11px] text-zinc-500 font-mono">Console · prototype UI · v0.1</div>
+      </div>
+    </div>
+    <div id="harness-status" class="text-xs font-mono px-3 py-1.5 rounded-full border border-zinc-800 bg-zinc-900/70 flex items-center gap-2">
+      <span class="w-1.5 h-1.5 rounded-full bg-zinc-500 animate-pulse"></span>
+      <span>checking harness…</span>
+    </div>
+  </div>
+</header>
+
+<main class="max-w-7xl mx-auto px-6 py-8 space-y-6">
+
+  <!-- ================== About / Getting Started ================== -->
+  <details id="about-panel" class="rounded-xl border border-zinc-800 bg-zinc-900/40" open>
+    <summary class="p-5 flex items-center justify-between cursor-pointer select-none">
+      <div class="flex items-center gap-3">
+        <span class="caret text-zinc-500">▸</span>
+        <div>
+          <div class="text-sm font-semibold tracking-tight flex items-center gap-2">
+            About this tool
+            <span class="chip chip-zinc">Getting started</span>
+          </div>
+          <div class="text-[11px] text-zinc-500 font-mono mt-0.5">what fd-eval-harness is · what happens when you RUN · how to use it</div>
+        </div>
+      </div>
+      <span class="text-[11px] text-zinc-600 font-mono">click to collapse</span>
+    </summary>
+
+    <div class="px-5 pb-6 pt-1 space-y-6">
+
+      <!-- What it is -->
+      <div>
+        <div class="text-[11px] uppercase tracking-[0.2em] text-zinc-500 font-semibold mb-2">What is this?</div>
+        <p class="text-sm text-zinc-300 leading-relaxed">
+          <span class="font-mono text-teal-300">fd-eval-harness</span> is a shared execution layer for evaluating
+          full-duplex speech-to-speech (STS) AI models. You give it an audio file and ground-truth labels, and it
+          runs a <span class="font-mono text-zinc-200">model adapter</span> against a scoring
+          <span class="font-mono text-zinc-200">task</span> to produce a single, comparable score.
+        </p>
+        <p class="text-sm text-zinc-400 leading-relaxed mt-2">
+          Different STS models have different I/O shapes. The harness hides that behind a common runner,
+          so the same task can score Moshi, a stub, or a real-time cloud model the same way.
+        </p>
+      </div>
+
+      <!-- Concepts -->
+      <div>
+        <div class="text-[11px] uppercase tracking-[0.2em] text-zinc-500 font-semibold mb-3">Core concepts</div>
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-3">
+          <div class="rounded-lg border border-zinc-800 bg-zinc-950/40 p-3">
+            <div class="flex items-center gap-2">
+              <span class="chip chip-violet">▶ Task</span>
+              <span class="text-[11px] font-mono text-zinc-500">what is measured</span>
+            </div>
+            <div class="text-[12px] text-zinc-400 mt-1.5 leading-relaxed">
+              Picks a scoring rule. Example tasks:
+              <span class="font-mono text-zinc-300">voice_activity_detection</span>,
+              <span class="font-mono text-zinc-300">turn_taking_latency</span>,
+              <span class="font-mono text-zinc-300">tool_use_under_disfluency</span>,
+              <span class="font-mono text-zinc-300">interruption_state_update</span>.
+            </div>
+          </div>
+          <div class="rounded-lg border border-zinc-800 bg-zinc-950/40 p-3">
+            <div class="flex items-center gap-2">
+              <span class="chip chip-teal">⚙ Adapter</span>
+              <span class="text-[11px] font-mono text-zinc-500">the model under test</span>
+            </div>
+            <div class="text-[12px] text-zinc-400 mt-1.5 leading-relaxed">
+              Wraps a concrete model (or a test stub) so it emits prediction events in a uniform schema.
+              Examples: <span class="font-mono text-zinc-300">energy_vad</span>,
+              <span class="font-mono text-zinc-300">moshi</span>,
+              <span class="font-mono text-zinc-300">tool_use_stub</span>.
+            </div>
+          </div>
+          <div class="rounded-lg border border-zinc-800 bg-zinc-950/40 p-3">
+            <div class="flex items-center gap-2">
+              <span class="chip chip-sky">◎ AudioSession</span>
+              <span class="text-[11px] font-mono text-zinc-500">the conversation</span>
+            </div>
+            <div class="text-[12px] text-zinc-400 mt-1.5 leading-relaxed">
+              A multichannel audio blob plus which channels are <span class="text-zinc-300">input</span>
+              (what the model hears) vs. <span class="text-zinc-300">target</span>
+              (what the model is expected to produce on).
+            </div>
+          </div>
+          <div class="rounded-lg border border-zinc-800 bg-zinc-950/40 p-3">
+            <div class="flex items-center gap-2">
+              <span class="chip chip-amber">⟋ Predictions</span>
+              <span class="chip chip-zinc">⟍ References</span>
+            </div>
+            <div class="text-[12px] text-zinc-400 mt-1.5 leading-relaxed">
+              The adapter streams <span class="text-zinc-300">PredictionEvents</span> (VAD state changes,
+              turn onsets, tool calls, transcript chunks). Your <span class="font-mono text-zinc-300">labels.json</span>
+              becomes typed <span class="text-zinc-300">References</span>. The task compares the two and returns a score.
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- How to use -->
+      <div>
+        <div class="text-[11px] uppercase tracking-[0.2em] text-zinc-500 font-semibold mb-3">How to use (3 steps)</div>
+        <ol class="space-y-2.5">
+          <li class="flex items-start gap-3 text-sm">
+            <span class="mt-0.5 w-6 h-6 rounded-full bg-zinc-900 border border-zinc-700 grid place-items-center text-[11px] font-mono text-teal-300 shrink-0">1</span>
+            <div class="text-zinc-300">
+              Pick a <span class="chip chip-violet">Task</span> and an
+              <span class="chip chip-teal">Adapter</span> on the left.
+              <span class="text-[12px] text-zinc-500">The chips tell you what kind of measurement this is and what kind of model is being tested.</span>
+            </div>
+          </li>
+          <li class="flex items-start gap-3 text-sm">
+            <span class="mt-0.5 w-6 h-6 rounded-full bg-zinc-900 border border-zinc-700 grid place-items-center text-[11px] font-mono text-teal-300 shrink-0">2</span>
+            <div class="text-zinc-300">
+              Upload <span class="font-mono text-zinc-200">audio.wav</span> and
+              <span class="font-mono text-zinc-200">labels.json</span>, or hit
+              <span class="font-mono text-teal-300">Load sample pair</span> for a canned example.
+              <span class="text-[12px] text-zinc-500">Set which channels the model listens on (<span class="font-mono">In</span>) and which it answers on (<span class="font-mono">Tgt</span>).</span>
+            </div>
+          </li>
+          <li class="flex items-start gap-3 text-sm">
+            <span class="mt-0.5 w-6 h-6 rounded-full bg-zinc-900 border border-zinc-700 grid place-items-center text-[11px] font-mono text-teal-300 shrink-0">3</span>
+            <div class="text-zinc-300">
+              Hit <span class="font-mono text-teal-300">RUN EVALUATION</span>.
+              You get back a score in [0, 1], per-task details, and a preview of the first 20 predictions/references.
+            </div>
+          </li>
+        </ol>
+      </div>
+
+      <!-- What happens on RUN -->
+      <div>
+        <div class="text-[11px] uppercase tracking-[0.2em] text-zinc-500 font-semibold mb-3">What happens when you press RUN</div>
+        <div class="rounded-lg border border-zinc-800 bg-zinc-950/60 p-4 font-mono text-[12px] text-zinc-400 leading-relaxed space-y-1.5">
+          <div><span class="text-zinc-600">1.</span> UI uploads <span class="text-zinc-300">audio + labels</span> to <span class="text-teal-300">/api/evaluate</span>.</div>
+          <div><span class="text-zinc-600">2.</span> Server builds an <span class="text-sky-300">AudioSession</span> with your channel config.</div>
+          <div><span class="text-zinc-600">3.</span> The <span class="text-teal-300">adapter</span> streams prediction events while processing the session.</div>
+          <div><span class="text-zinc-600">4.</span> The <span class="text-violet-300">task</span> parses your labels into typed References, then compares predictions against them.</div>
+          <div><span class="text-zinc-600">5.</span> You get back a <span class="text-zinc-200">TaskResult</span>: <span class="text-teal-300">score</span> (0–1) + <span class="text-zinc-300">details</span> (precision/recall, token counts, judge reasoning, …).</div>
+        </div>
+      </div>
+
+      <!-- Legend for chip colors -->
+      <div>
+        <div class="text-[11px] uppercase tracking-[0.2em] text-zinc-500 font-semibold mb-2">Chip legend</div>
+        <div class="flex flex-wrap gap-x-5 gap-y-2 text-[11px] text-zinc-500">
+          <span class="flex items-center gap-1.5"><span class="chip chip-sky">◎ observer</span> task grades the audio, model is passive</span>
+          <span class="flex items-center gap-1.5"><span class="chip chip-violet">▶ participant</span> model must actually respond</span>
+          <span class="flex items-center gap-1.5"><span class="chip chip-teal">algorithmic</span> deterministic scoring (F1, precision, …)</span>
+          <span class="flex items-center gap-1.5"><span class="chip chip-amber">llm-judge</span> LLM grades the response (needs OPENAI_API_KEY)</span>
+        </div>
+      </div>
+    </div>
+  </details>
+
+<div class="grid grid-cols-1 lg:grid-cols-12 gap-6">
+
+  <!-- LEFT: Configuration -->
+  <section class="lg:col-span-5 space-y-5">
+    <div class="flex items-center justify-between">
+      <h2 class="text-[11px] uppercase tracking-[0.2em] text-zinc-500 font-semibold">Configuration</h2>
+      <span class="text-[11px] text-zinc-600 font-mono">all fields required</span>
+    </div>
+
+    <!-- Registry card -->
+    <div class="rounded-xl border border-zinc-800 bg-zinc-900/40 p-5 space-y-4">
+      <div>
+        <div class="flex items-center justify-between">
+          <label class="text-[11px] font-medium text-zinc-400 uppercase tracking-wider">Task</label>
+          <span id="task-meta" class="text-[10px] text-zinc-600 font-mono"></span>
+        </div>
+        <select id="task-select" class="mt-1.5 w-full bg-zinc-950 border border-zinc-800 hover:border-zinc-700 rounded-md px-3 py-2 text-sm font-mono focus:border-teal-500 focus:outline-none focus:ring-1 focus:ring-teal-500/30 transition">
+          <option value="">loading…</option>
+        </select>
+        <div id="task-badges" class="mt-2 flex flex-wrap gap-1.5"></div>
+        <div id="task-doc" class="mt-2 text-[11px] text-zinc-500 leading-relaxed"></div>
+      </div>
+
+      <div>
+        <div class="flex items-center justify-between">
+          <label class="text-[11px] font-medium text-zinc-400 uppercase tracking-wider">Adapter</label>
+          <span id="adapter-meta" class="text-[10px] text-zinc-600 font-mono"></span>
+        </div>
+        <select id="adapter-select" class="mt-1.5 w-full bg-zinc-950 border border-zinc-800 hover:border-zinc-700 rounded-md px-3 py-2 text-sm font-mono focus:border-teal-500 focus:outline-none focus:ring-1 focus:ring-teal-500/30 transition">
+          <option value="">loading…</option>
+        </select>
+        <div id="adapter-doc" class="mt-2 text-[11px] text-zinc-500 leading-relaxed"></div>
+      </div>
+
+      <div>
+        <label class="text-[11px] font-medium text-zinc-400 uppercase tracking-wider">Adapter args (JSON)</label>
+        <textarea id="adapter-args" rows="2" spellcheck="false"
+          class="mt-1.5 w-full bg-zinc-950 border border-zinc-800 hover:border-zinc-700 rounded-md px-3 py-2 text-[13px] font-mono focus:border-teal-500 focus:outline-none focus:ring-1 focus:ring-teal-500/30 transition"
+          placeholder='{"threshold": 0.05}'>{}</textarea>
+        <div id="adapter-args-hint" class="text-[10px] mt-1 font-mono text-zinc-600"></div>
+      </div>
+
+      <div>
+        <label class="text-[11px] font-medium text-zinc-400 uppercase tracking-wider">Task args (JSON, optional)</label>
+        <textarea id="task-args" rows="2" spellcheck="false"
+          class="mt-1.5 w-full bg-zinc-950 border border-zinc-800 hover:border-zinc-700 rounded-md px-3 py-2 text-[13px] font-mono focus:border-teal-500 focus:outline-none focus:ring-1 focus:ring-teal-500/30 transition"
+          placeholder='{"tolerance_s": 0.2}'>{}</textarea>
+      </div>
+
+      <div class="grid grid-cols-2 gap-3">
+        <div>
+          <label class="text-[11px] font-medium text-zinc-400 uppercase tracking-wider">In channels</label>
+          <input id="in-channels" value="0" spellcheck="false"
+            class="mt-1.5 w-full bg-zinc-950 border border-zinc-800 hover:border-zinc-700 rounded-md px-3 py-2 text-sm font-mono focus:border-teal-500 focus:outline-none focus:ring-1 focus:ring-teal-500/30 transition" />
+        </div>
+        <div>
+          <label class="text-[11px] font-medium text-zinc-400 uppercase tracking-wider">Tgt channels</label>
+          <input id="tgt-channels" value="1" spellcheck="false"
+            class="mt-1.5 w-full bg-zinc-950 border border-zinc-800 hover:border-zinc-700 rounded-md px-3 py-2 text-sm font-mono focus:border-teal-500 focus:outline-none focus:ring-1 focus:ring-teal-500/30 transition" />
+        </div>
+      </div>
+    </div>
+
+    <!-- Inputs card -->
+    <div class="rounded-xl border border-zinc-800 bg-zinc-900/40 p-5 space-y-4">
+      <div class="flex items-center justify-between">
+        <label class="text-[11px] font-medium text-zinc-400 uppercase tracking-wider">Inputs</label>
+        <button id="load-samples" class="text-[11px] text-teal-400 hover:text-teal-300 disabled:text-zinc-600 disabled:cursor-not-allowed font-mono flex items-center gap-1">
+          <svg class="w-3 h-3" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path d="M12 4v12m0 0l-4-4m4 4l4-4M4 20h16"/></svg>
+          Load sample pair
+        </button>
+      </div>
+
+      <!-- Per-task sample advisory -->
+      <div id="sample-advisory" class="hidden rounded-md border border-amber-500/25 bg-amber-500/5 px-3 py-2 text-[11px] text-amber-200/90 leading-relaxed"></div>
+
+      <div>
+        <label class="text-[11px] text-zinc-500 font-mono">audio.wav</label>
+        <input type="file" id="audio-input" accept="audio/*,.wav"
+          class="mt-1.5 w-full text-xs text-zinc-400 file:mr-3 file:py-1.5 file:px-3 file:rounded file:border file:border-zinc-700 file:bg-zinc-900 file:text-zinc-300 file:text-[11px] file:font-mono hover:file:bg-zinc-800 file:cursor-pointer cursor-pointer" />
+        <div id="audio-hint" class="text-[11px] text-zinc-600 mt-1.5 font-mono"></div>
+      </div>
+
+      <div>
+        <label class="text-[11px] text-zinc-500 font-mono">labels.json</label>
+        <input type="file" id="labels-input" accept="application/json,.json"
+          class="mt-1.5 w-full text-xs text-zinc-400 file:mr-3 file:py-1.5 file:px-3 file:rounded file:border file:border-zinc-700 file:bg-zinc-900 file:text-zinc-300 file:text-[11px] file:font-mono hover:file:bg-zinc-800 file:cursor-pointer cursor-pointer" />
+        <div id="labels-hint" class="text-[11px] text-zinc-600 mt-1.5 font-mono"></div>
+      </div>
+    </div>
+
+    <button id="run-btn" disabled
+      class="w-full py-3.5 rounded-xl bg-gradient-to-r from-teal-500 to-cyan-600 hover:from-teal-400 hover:to-cyan-500 disabled:from-zinc-800 disabled:to-zinc-800 disabled:text-zinc-500 disabled:cursor-not-allowed text-zinc-950 font-semibold text-sm tracking-wide flex items-center justify-center gap-2 transition-all shadow-lg shadow-teal-500/10 disabled:shadow-none">
+      <span id="run-btn-label" class="flex items-center gap-2">
+        <svg class="w-4 h-4" fill="currentColor" viewBox="0 0 24 24"><path d="M8 5v14l11-7z"/></svg>
+        RUN EVALUATION
+      </span>
+    </button>
+  </section>
+
+  <!-- RIGHT: Results -->
+  <section class="lg:col-span-7 space-y-5">
+    <div class="flex items-center justify-between">
+      <h2 class="text-[11px] uppercase tracking-[0.2em] text-zinc-500 font-semibold">Results</h2>
+      <div id="run-status" class="text-[11px] font-mono text-zinc-600"></div>
+    </div>
+
+    <!-- Empty state -->
+    <div id="results-empty" class="rounded-xl border border-dashed border-zinc-800 bg-zinc-900/20 p-14 text-center">
+      <div class="font-mono text-6xl text-zinc-800 select-none">∅</div>
+      <div class="mt-4 text-sm text-zinc-500">No evaluation run yet.</div>
+      <div class="mt-1.5 text-[11px] text-zinc-600 font-mono">Configure on the left · hit RUN.</div>
+    </div>
+
+    <!-- Populated state -->
+    <div id="results-container" class="hidden space-y-5"></div>
+  </section>
+</div>
+</main>
+
+<footer class="max-w-7xl mx-auto px-6 py-6 mt-10 text-[11px] text-zinc-600 font-mono border-t border-zinc-900 flex items-center justify-between">
+  <span>fd-eval-harness · shared execution layer for full-duplex voice evaluation</span>
+  <span id="build-info">prototype UI · claude</span>
+</footer>
+
+<script>
+(() => {
+  const $ = (id) => document.getElementById(id);
+
+  const state = {
+    meta: null,
+    audioFile: null,
+    labelsFile: null,
+  };
+
+  // --- init ---
+  bootstrap();
+
+  async function bootstrap() {
+    await loadMeta();
+    wireEvents();
+    updateRunButton();
+  }
+
+  async function loadMeta() {
+    try {
+      const resp = await fetch('/api/meta');
+      const data = await resp.json();
+      state.meta = data;
+
+      if (!data.harness_installed) {
+        setHarnessStatus('err', 'harness not importable');
+        const hint = data.hint ? `\n\n${data.hint}` : '';
+        $('task-select').innerHTML = '<option value="">—</option>';
+        $('adapter-select').innerHTML = '<option value="">—</option>';
+        renderError(`Harness is not importable: ${data.error}${hint}`);
+        return;
+      }
+
+      setHarnessStatus('ok', `${data.tasks.length} task · ${data.adapters.length} adapter`);
+      populateSelect('task-select', data.tasks, 'Select task');
+      populateSelect('adapter-select', data.adapters, 'Select adapter');
+      // Set defaults if only one option
+      if (data.tasks.length === 1) $('task-select').value = data.tasks[0].name;
+      if (data.adapters.length === 1) $('adapter-select').value = data.adapters[0].name;
+      refreshTaskMeta();
+      refreshAdapterMeta();
+    } catch (e) {
+      setHarnessStatus('err', 'UI fetch failed');
+      renderError(`Meta fetch failed: ${e.message}`);
+    }
+  }
+
+  function populateSelect(id, items, placeholder) {
+    const el = $(id);
+    el.innerHTML = `<option value="">${placeholder}</option>` +
+      items.map(i => `<option value="${i.name}">${i.name}</option>`).join('');
+  }
+
+  function setHarnessStatus(state, text) {
+    const dotColor = state === 'ok' ? 'bg-teal-400' : state === 'err' ? 'bg-rose-400' : 'bg-amber-400';
+    const textColor = state === 'ok' ? 'text-teal-300' : state === 'err' ? 'text-rose-300' : 'text-zinc-300';
+    $('harness-status').className = `text-xs font-mono px-3 py-1.5 rounded-full border border-zinc-800 bg-zinc-900/70 flex items-center gap-2 ${textColor}`;
+    $('harness-status').innerHTML = `<span class="w-1.5 h-1.5 rounded-full ${dotColor}"></span><span>${text}</span>`;
+  }
+
+  function wireEvents() {
+    $('task-select').addEventListener('change', refreshTaskMeta);
+    $('adapter-select').addEventListener('change', refreshAdapterMeta);
+    $('audio-input').addEventListener('change', onAudioChange);
+    $('labels-input').addEventListener('change', onLabelsChange);
+    $('load-samples').addEventListener('click', loadSamples);
+    $('run-btn').addEventListener('click', runEval);
+
+    ['task-select', 'adapter-select', 'audio-input', 'labels-input'].forEach(id => {
+      $(id).addEventListener('change', updateRunButton);
+    });
+  }
+
+  function refreshTaskMeta() {
+    const name = $('task-select').value;
+    const task = (state.meta?.tasks || []).find(t => t.name === name);
+    const metaSpan = $('task-meta');
+    const badges = $('task-badges');
+    const doc = $('task-doc');
+    if (!task) {
+      metaSpan.textContent = '';
+      badges.innerHTML = '';
+      doc.textContent = '';
+      refreshSampleAdvisory();
+      return;
+    }
+    metaSpan.textContent = `v${task.version}`;
+    const modeChip = task.mode === 'observer'
+      ? `<span class="chip chip-sky">◎ observer</span>`
+      : task.mode === 'participant'
+        ? `<span class="chip chip-violet">▶ participant</span>`
+        : `<span class="chip chip-zinc">${task.mode}</span>`;
+    const scoringChip = task.scoring_method === 'algorithmic'
+      ? `<span class="chip chip-teal">algorithmic</span>`
+      : task.scoring_method === 'llm-judge'
+        ? `<span class="chip chip-amber">llm-judge</span>`
+        : `<span class="chip chip-zinc">${task.scoring_method}</span>`;
+    badges.innerHTML = modeChip + scoringChip;
+    doc.textContent = task.doc || '';
+
+    // Adapter-args hint per task
+    const hint = $('adapter-args-hint');
+    if (name === 'voice_activity_detection') {
+      hint.textContent = 'energy_vad takes: threshold (float), frame_ms (int)';
+    } else if (name === 'turn_taking_latency') {
+      hint.textContent = 'moshi takes: voice (str), emit_as (str)';
+    } else if (name === 'tool_use_under_disfluency') {
+      hint.textContent = 'tool_use_stub takes: stub_file (str, optional path to JSON)';
+    } else if (name === 'interruption_state_update') {
+      hint.textContent = 'needs a TranscriptPredictionEvent-emitting adapter; none ship in v0.2';
+    } else {
+      hint.textContent = '';
+    }
+
+    refreshSampleAdvisory();
+  }
+
+  function refreshSampleAdvisory() {
+    const name = $('task-select').value;
+    const task = (state.meta?.tasks || []).find(t => t.name === name);
+    const adv = $('sample-advisory');
+    const btn = $('load-samples');
+
+    if (!task) {
+      adv.classList.add('hidden');
+      adv.innerHTML = '';
+      btn.disabled = true;
+      btn.title = 'Select a task first';
+      return;
+    }
+
+    if (task.sample?.available) {
+      btn.disabled = false;
+      btn.title = '';
+      adv.classList.remove('hidden');
+      adv.className = 'rounded-md border border-teal-500/25 bg-teal-500/5 px-3 py-2 text-[11px] text-teal-200/90 leading-relaxed';
+      adv.innerHTML = `<span class="font-mono text-teal-300">Sample available</span> · ${escapeHtml(task.sample.blurb || '')}`;
+    } else {
+      btn.disabled = true;
+      btn.title = 'No canned sample available for this task';
+      adv.classList.remove('hidden');
+      adv.className = 'rounded-md border border-amber-500/25 bg-amber-500/5 px-3 py-2 text-[11px] text-amber-200/90 leading-relaxed';
+      adv.innerHTML = `<span class="font-mono text-amber-300">No sample bundled</span> · ${escapeHtml(task.sample?.reason || 'Provide your own audio.wav and labels.json.')}`;
+    }
+  }
+
+  function refreshAdapterMeta() {
+    const name = $('adapter-select').value;
+    const adapter = (state.meta?.adapters || []).find(a => a.name === name);
+    if (!adapter) { $('adapter-meta').textContent = ''; $('adapter-doc').textContent = ''; return; }
+    $('adapter-meta').textContent = name;
+    $('adapter-doc').textContent = adapter.doc || '';
+
+    // Sensible default adapter_args per adapter
+    const ta = $('adapter-args');
+    if (ta.value.trim() === '{}' || ta.value.trim() === '') {
+      if (name === 'energy_vad') ta.value = '{"threshold": 0.02}';
+      else if (name === 'moshi') ta.value = '{"emit_as": "turn_taking"}';
+    }
+  }
+
+  function onAudioChange(e) {
+    const f = e.target.files[0];
+    state.audioFile = f || null;
+    $('audio-hint').textContent = f
+      ? `${f.name} · ${(f.size / 1024).toFixed(1)} KB`
+      : '';
+  }
+
+  function onLabelsChange(e) {
+    const f = e.target.files[0];
+    state.labelsFile = f || null;
+    $('labels-hint').textContent = f
+      ? `${f.name} · ${(f.size / 1024).toFixed(1)} KB`
+      : '';
+  }
+
+  async function loadSamples() {
+    if ($('load-samples').disabled) return;
+
+    const taskName = $('task-select').value;
+    const task = (state.meta?.tasks || []).find(t => t.name === taskName);
+    if (!task?.sample?.available) {
+      setRunStatus('err', 'no sample available for the selected task');
+      return;
+    }
+
+    const s = task.sample;
+    try {
+      const audioUrl = `/api/samples/${encodeURIComponent(sampleFilenames(taskName).audio)}`;
+      const labelsUrl = `/api/samples/${encodeURIComponent(sampleFilenames(taskName).labels)}`;
+      const [aResp, lResp] = await Promise.all([fetch(audioUrl), fetch(labelsUrl)]);
+      if (!aResp.ok || !lResp.ok) throw new Error('sample fetch failed');
+      const [aBlob, lBlob] = await Promise.all([aResp.blob(), lResp.blob()]);
+      const aFile = new File([aBlob], sampleFilenames(taskName).audio, { type: 'audio/wav' });
+      const lFile = new File([lBlob], sampleFilenames(taskName).labels, { type: 'application/json' });
+      const dt1 = new DataTransfer(); dt1.items.add(aFile); $('audio-input').files = dt1.files;
+      const dt2 = new DataTransfer(); dt2.items.add(lFile); $('labels-input').files = dt2.files;
+      state.audioFile = aFile;
+      state.labelsFile = lFile;
+      $('audio-hint').textContent = `${aFile.name} · ${(aFile.size / 1024).toFixed(1)} KB · from /api/samples`;
+      $('labels-hint').textContent = `${lFile.name} · ${(lFile.size / 1024).toFixed(1)} KB · from /api/samples`;
+
+      // Auto-pick matching adapter & channels from the sample bundle.
+      if (s.adapter && (state.meta?.adapters || []).some(a => a.name === s.adapter)) {
+        $('adapter-select').value = s.adapter;
+        refreshAdapterMeta();
+      }
+      if (s.adapter_args) {
+        $('adapter-args').value = JSON.stringify(s.adapter_args);
+      }
+      if (typeof s.in_channels === 'string') $('in-channels').value = s.in_channels;
+      if (typeof s.tgt_channels === 'string') $('tgt-channels').value = s.tgt_channels;
+      updateRunButton();
+      setRunStatus('ok', `sample loaded for ${taskName}`);
+    } catch (e) {
+      setRunStatus('err', `sample load failed: ${e.message}`);
+    }
+  }
+
+  // Map task-name → per-task sample filenames expected by the server.
+  function sampleFilenames(taskName) {
+    if (taskName === 'tool_use_under_disfluency') {
+      return { audio: 'tool_use__audio.wav', labels: 'tool_use__labels.json' };
+    }
+    // Default: voice_activity_detection (also the legacy alias names).
+    return { audio: 'vad__audio.wav', labels: 'vad__labels.json' };
+  }
+
+  function updateRunButton() {
+    const ok =
+      !!state.meta?.harness_installed &&
+      !!$('task-select').value &&
+      !!$('adapter-select').value &&
+      !!$('audio-input').files?.[0] &&
+      !!$('labels-input').files?.[0];
+    $('run-btn').disabled = !ok;
+  }
+
+  function setRunStatus(kind, text) {
+    const el = $('run-status');
+    const color = kind === 'ok' ? 'text-teal-400' : kind === 'err' ? 'text-rose-400' : kind === 'running' ? 'text-amber-400' : 'text-zinc-600';
+    el.className = `text-[11px] font-mono ${color}`;
+    if (kind === 'running') {
+      el.innerHTML = `<span class="inline-flex items-center gap-1.5"><svg class="w-3 h-3 spinner" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path d="M21 12a9 9 0 1 1-6.2-8.55" stroke-linecap="round"/></svg>${text}</span>`;
+    } else {
+      el.textContent = text;
+    }
+  }
+
+  async function runEval() {
+    if ($('run-btn').disabled) return;
+    setRunStatus('running', 'uploading & running adapter…');
+    $('run-btn').disabled = true;
+    const originalLabel = $('run-btn-label').innerHTML;
+    $('run-btn-label').innerHTML = `<svg class="w-4 h-4 spinner" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path d="M21 12a9 9 0 1 1-6.2-8.55" stroke-linecap="round"/></svg>RUNNING…`;
+
+    const fd = new FormData();
+    fd.append('task', $('task-select').value);
+    fd.append('adapter', $('adapter-select').value);
+    fd.append('adapter_args', $('adapter-args').value || '{}');
+    fd.append('task_args', $('task-args').value || '{}');
+    fd.append('in_channels', $('in-channels').value);
+    fd.append('tgt_channels', $('tgt-channels').value);
+    fd.append('audio', $('audio-input').files[0]);
+    fd.append('labels', $('labels-input').files[0]);
+
+    const started = performance.now();
+    try {
+      const resp = await fetch('/api/evaluate', { method: 'POST', body: fd });
+      const data = await resp.json();
+      if (!resp.ok) {
+        throw new Error(data.detail || `HTTP ${resp.status}`);
+      }
+      const elapsed = (performance.now() - started) / 1000;
+      renderResults(data, elapsed);
+      setRunStatus('ok', `completed in ${elapsed.toFixed(2)}s`);
+    } catch (e) {
+      renderError(e.message);
+      setRunStatus('err', 'failed');
+    } finally {
+      $('run-btn').disabled = false;
+      $('run-btn-label').innerHTML = originalLabel;
+      updateRunButton();
+    }
+  }
+
+  // --- rendering ---
+
+  function renderError(message) {
+    $('results-empty').classList.add('hidden');
+    const c = $('results-container');
+    c.classList.remove('hidden');
+    c.innerHTML = `
+      <div class="rounded-xl border border-rose-500/30 bg-rose-500/5 p-5 fade-in">
+        <div class="flex items-center gap-2 text-rose-300">
+          <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path d="M12 9v2m0 4h.01M10.29 3.86L1.82 18a2 2 0 001.71 3h16.94a2 2 0 001.71-3L13.71 3.86a2 2 0 00-3.42 0z"/></svg>
+          <span class="text-xs font-mono uppercase tracking-wider">Error</span>
+        </div>
+        <pre class="mt-3 text-sm font-mono text-rose-200 whitespace-pre-wrap">${escapeHtml(message)}</pre>
+      </div>`;
+  }
+
+  function renderResults(r, elapsedSec) {
+    $('results-empty').classList.add('hidden');
+    const c = $('results-container');
+    c.classList.remove('hidden');
+
+    const pct = Math.max(0, Math.min(1, r.score || 0));
+    const pctTurn = `${(pct * 360).toFixed(2)}deg`;
+    const scoreClass = pct >= 0.75 ? 'score-bg' : pct >= 0.5 ? 'score-bg-low' : 'score-bg-bad';
+    const scoreColor = pct >= 0.75 ? 'text-teal-300' : pct >= 0.5 ? 'text-amber-300' : 'text-rose-300';
+
+    const modeChip = r.mode === 'observer'
+      ? `<span class="chip chip-sky">◎ observer</span>`
+      : r.mode === 'participant'
+        ? `<span class="chip chip-violet">▶ participant</span>`
+        : `<span class="chip chip-zinc">${r.mode}</span>`;
+    const scoringChip = r.scoring_method === 'algorithmic'
+      ? `<span class="chip chip-teal">algorithmic</span>`
+      : `<span class="chip chip-zinc">${r.scoring_method}</span>`;
+
+    const detailsRows = Object.entries(r.details || {}).map(([k, v]) => `
+      <div class="flex items-baseline justify-between py-2 border-b border-zinc-800/70 last:border-b-0">
+        <span class="text-xs text-zinc-400 font-mono">${escapeHtml(k)}</span>
+        <span class="text-sm font-mono tabular-nums">${formatVal(v)}</span>
+      </div>`).join('');
+
+    c.innerHTML = `
+      <!-- Score card -->
+      <div class="rounded-xl border border-zinc-800 bg-zinc-900/40 p-6 fade-in">
+        <div class="flex items-center gap-6">
+          <div class="relative w-28 h-28 rounded-full ${scoreClass}" style="--pct: ${pctTurn};">
+            <div class="absolute inset-[6px] rounded-full bg-zinc-950 grid place-items-center">
+              <div class="text-center">
+                <div class="text-2xl font-semibold ${scoreColor} font-mono tabular-nums">${pct.toFixed(3)}</div>
+                <div class="text-[9px] text-zinc-500 uppercase tracking-widest mt-0.5">score</div>
+              </div>
+            </div>
+          </div>
+          <div class="flex-1 min-w-0">
+            <div class="flex flex-wrap items-center gap-1.5">
+              <span class="chip chip-zinc">${escapeHtml(r.task)}</span>
+              <span class="chip chip-zinc">v${escapeHtml(r.task_version)}</span>
+              ${modeChip}
+              ${scoringChip}
+            </div>
+            <div class="mt-3 text-sm text-zinc-400">
+              Adapter <span class="font-mono text-zinc-200">${escapeHtml(r.adapter)}</span>
+              · ${elapsedSec ? `<span class="font-mono text-zinc-500">${elapsedSec.toFixed(2)}s</span>` : ''}
+            </div>
+            <div class="mt-3 grid grid-cols-2 sm:grid-cols-4 gap-3 text-xs font-mono">
+              <div><div class="text-zinc-600">duration</div><div class="text-zinc-200 tabular-nums">${r.audio.duration_s.toFixed(2)}s</div></div>
+              <div><div class="text-zinc-600">sr</div><div class="text-zinc-200 tabular-nums">${r.audio.sample_rate}Hz</div></div>
+              <div><div class="text-zinc-600">channels</div><div class="text-zinc-200 tabular-nums">${r.audio.channels}</div></div>
+              <div><div class="text-zinc-600">frames</div><div class="text-zinc-200 tabular-nums">${r.audio.frames.toLocaleString()}</div></div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Counts + details -->
+      <div class="grid grid-cols-1 md:grid-cols-2 gap-5">
+        <div class="rounded-xl border border-zinc-800 bg-zinc-900/40 p-5 fade-in">
+          <div class="text-[11px] uppercase tracking-widest text-zinc-500 mb-3">Predictions vs References</div>
+          <div class="flex items-center justify-between">
+            <div>
+              <div class="text-[10px] text-zinc-600 uppercase tracking-wider">pred</div>
+              <div class="text-2xl font-mono tabular-nums text-teal-300">${r.predictions_count}</div>
+            </div>
+            <div class="flex-1 mx-4 h-[2px] bg-zinc-800 relative">
+              <div class="absolute inset-y-0 left-0 bg-gradient-to-r from-teal-400 to-cyan-500" style="width: ${Math.min(100, r.predictions_count / Math.max(1, r.references_count) * 50)}%"></div>
+            </div>
+            <div class="text-right">
+              <div class="text-[10px] text-zinc-600 uppercase tracking-wider">ref</div>
+              <div class="text-2xl font-mono tabular-nums text-zinc-300">${r.references_count}</div>
+            </div>
+          </div>
+          <div class="mt-4 text-[11px] font-mono text-zinc-600">
+            in-channels <span class="text-zinc-400">${JSON.stringify(r.in_channels)}</span>
+            · tgt-channels <span class="text-zinc-400">${JSON.stringify(r.tgt_channels)}</span>
+          </div>
+        </div>
+
+        <div class="rounded-xl border border-zinc-800 bg-zinc-900/40 p-5 fade-in">
+          <div class="text-[11px] uppercase tracking-widest text-zinc-500 mb-3">Details</div>
+          ${detailsRows || `<div class="text-xs text-zinc-600 font-mono">no extra details reported</div>`}
+        </div>
+      </div>
+
+      <!-- Collapsible previews -->
+      <details class="rounded-xl border border-zinc-800 bg-zinc-900/40 fade-in">
+        <summary class="p-5 flex items-center justify-between">
+          <div class="flex items-center gap-2 text-sm">
+            <span class="caret text-zinc-500">▸</span>
+            <span class="font-medium">Predictions preview</span>
+            <span class="text-xs text-zinc-500 font-mono">first ${Math.min(20, r.predictions_count)} of ${r.predictions_count}</span>
+          </div>
+        </summary>
+        <div class="px-5 pb-5"><pre class="codeblock font-mono text-zinc-300">${escapeHtml(JSON.stringify(r.predictions_preview, null, 2))}</pre></div>
+      </details>
+
+      <details class="rounded-xl border border-zinc-800 bg-zinc-900/40 fade-in">
+        <summary class="p-5 flex items-center justify-between">
+          <div class="flex items-center gap-2 text-sm">
+            <span class="caret text-zinc-500">▸</span>
+            <span class="font-medium">References preview</span>
+            <span class="text-xs text-zinc-500 font-mono">first ${Math.min(20, r.references_count)} of ${r.references_count}</span>
+          </div>
+        </summary>
+        <div class="px-5 pb-5"><pre class="codeblock font-mono text-zinc-300">${escapeHtml(JSON.stringify(r.references_preview, null, 2))}</pre></div>
+      </details>
+
+      <details class="rounded-xl border border-zinc-800 bg-zinc-900/40 fade-in">
+        <summary class="p-5 flex items-center justify-between">
+          <div class="flex items-center gap-2 text-sm">
+            <span class="caret text-zinc-500">▸</span>
+            <span class="font-medium">Raw run.json</span>
+          </div>
+          <button onclick="navigator.clipboard.writeText(document.getElementById('raw-json').textContent); this.textContent='copied ✓'; setTimeout(()=>this.textContent='copy', 1200);"
+            class="text-[11px] text-teal-400 hover:text-teal-300 font-mono px-2 py-0.5 rounded border border-teal-500/30 hover:bg-teal-500/10 transition">copy</button>
+        </summary>
+        <div class="px-5 pb-5"><pre id="raw-json" class="codeblock font-mono text-zinc-300">${escapeHtml(JSON.stringify(r, null, 2))}</pre></div>
+      </details>
+    `;
+  }
+
+  function formatVal(v) {
+    if (typeof v === 'number') {
+      if (Number.isInteger(v)) return v.toString();
+      return v.toFixed(4);
+    }
+    return String(v);
+  }
+
+  function escapeHtml(s) {
+    return String(s).replace(/[&<>"']/g, (c) => ({
+      '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;',
+    }[c]));
+  }
+})();
+</script>
+</body>
+</html>

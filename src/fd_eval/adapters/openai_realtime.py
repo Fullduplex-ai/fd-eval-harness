@@ -11,7 +11,6 @@ import logging
 import os
 import queue
 import threading
-from typing import Literal
 
 import numpy as np
 import websockets
@@ -36,16 +35,23 @@ class OpenAIRealtimeAdapter(FDModelAdapter):
     def __init__(
         self,
         model: str = "gpt-4o-realtime-preview-2024-10-01",
-        voice: Literal["alloy", "echo", "shimmer"] = "alloy",
+        voice: str = "alloy",
+        timeout_s: float = 10.0,
     ):
         self.model = model
         self.voice = voice
+        self.timeout_s = timeout_s
         self.api_key = os.environ.get("OPENAI_API_KEY")
         if not self.api_key:
             raise ValueError("OPENAI_API_KEY environment variable is required.")
 
     def process(self, session: AudioSession) -> PredictionStream:
         """Process the audio session by streaming to OpenAI Realtime API."""
+        if session.sample_rate != 24000:
+            raise ValueError(
+                f"OpenAIRealtimeAdapter requires 24000 Hz audio, got {session.sample_rate}"
+            )
+
         q = queue.Queue()
         stop_event = threading.Event()
 
@@ -100,6 +106,9 @@ class OpenAIRealtimeAdapter(FDModelAdapter):
 
                 await asyncio.gather(sender_task, receiver_task)
         except Exception as e:
+            # Per D016 Edit 1: Network errors currently swallow exceptions
+            # and return an empty stream.
+            # A run-level adapter_errors counter should be added in v0.3.
             logger.error(f"WebSocket error in Realtime Adapter: {e}")
         finally:
             stop_event.set()
@@ -133,7 +142,7 @@ class OpenAIRealtimeAdapter(FDModelAdapter):
         await ws.send(json.dumps({"type": "input_audio_buffer.commit"}))
 
         # Wait a bit to ensure the model's final response is received before closing
-        await asyncio.sleep(10.0)
+        await asyncio.sleep(self.timeout_s)
         # End sender task, which will also complete the gather and eventually close the websocket.
 
     async def _receive_events(

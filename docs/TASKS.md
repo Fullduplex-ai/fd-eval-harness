@@ -115,9 +115,9 @@ The v0.1 reference distribution includes **two** public-literature task plugins 
 
 These two tasks together exercise both modes and the two most common event-matching shapes (symmetric tolerance F1 for observer VAD; asymmetric forward-walk pairing for participant latency). The `scoring_method` declaration is uniform across v0.1 (`"algorithmic"`) because v0.1 scope does not include LLM-judge or human-MOS tasks.
 
-### Planned for v0.2+ (Business-Value Priorities)
+### Shipped in v0.2 (Business-Value Priorities)
 
-Based on D014 (Positioning as a Shared Execution Layer), the harness prioritizes plugins that address critical failure modes in real-world conversational agents. The following participant-mode tasks are the immediate next targets for v0.2:
+Based on D014 (Positioning as a Shared Execution Layer), the harness prioritizes plugins that address critical failure modes in real-world conversational agents. The following participant-mode tasks were completed in v0.2:
 
 #### 3. `interruption_state_update`
 - **Mode**: participant.

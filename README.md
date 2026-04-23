@@ -52,11 +52,14 @@ Licensed under Apache-2.0.
 ```bash
 pip install fd-eval-harness
 
+# Make sure you have OPENAI_API_KEY set in your environment
+export OPENAI_API_KEY="sk-..."
+
 fd-eval \
-  --tasks voice_activity_detection \
-  --adapter energy_vad \
-  --in-channels 0,1 \
-  --tgt-channels "" \
+  --tasks interruption_state_update \
+  --adapter openai_realtime \
+  --in-channels 0 \
+  --tgt-channels 1 \
   --audio-path path/to/session.wav \
   --labels-path path/to/labels.json \
   --output results.json

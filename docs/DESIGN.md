@@ -74,7 +74,7 @@ Adapter-specific configuration (voice variant, sampling temperature, API credent
 
 v0.1 target adapters:
 - `local-hf-model`: loads a Hugging Face model checkpoint, runs inference locally. Primary target: Kyutai Moshi family. Ships both Moshiko and Moshika voice variants, selected via a required `voice: Literal["moshiko", "moshika"]` constructor argument (see D010).
-- `openai-realtime-api`: stub acceptable in v0.1. Returns fixed mock outputs. Real API integration is v0.2.
+- `openai-realtime-api`: Fully implemented in v0.2. Streams via WebSockets using server-side VAD (1x pacing).
 
 ### 4.3 DataLoader
 
