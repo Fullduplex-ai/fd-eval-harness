@@ -62,6 +62,7 @@ tool_use_under_disfluency = "fd_eval.tasks.tool_use_under_disfluency:ToolUseUnde
 moshi = "fd_eval.adapters.moshi:MoshiAdapter"
 energy_vad = "fd_eval.adapters.energy_vad:EnergyVADAdapter"
 tool_use_stub = "fd_eval.adapters.tool_use_stub:ToolUseStubAdapter"
+openai_realtime = "fd_eval.adapters.openai_realtime:OpenAIRealtimeAdapter"
 
 [project.urls]
 Homepage = "https://github.com/fullduplexai/fd-eval-harness"
