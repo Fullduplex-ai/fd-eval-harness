@@ -3,6 +3,13 @@ from unittest.mock import MagicMock, patch
 import numpy as np
 import pytest
 
+# Moshi and huggingface_hub are heavy optional deps (needed for the real adapter
+# at runtime and for the patch targets in the fixture). Skip the whole module if
+# either is unavailable so the rest of the suite still runs in lightweight
+# environments (e.g. developer sandboxes without GPU wheels).
+pytest.importorskip("huggingface_hub")
+pytest.importorskip("moshi")
+
 from fd_eval.adapters import MoshiAdapter
 from fd_eval.adapters.moshi import MoshiPredictionEvent
 from fd_eval.core import AudioSession
@@ -25,12 +32,15 @@ def mock_moshi_dependencies():
         mock_mimi.encode.return_value = MagicMock()
 
         call_counter = 0
+
         def mock_decode(*args, **kwargs):
             nonlocal call_counter
             import torch
+
             res = torch.ones((1, 1, 1920)) if call_counter % 2 == 0 else torch.zeros((1, 1, 1920))
             call_counter += 1
             return res
+
         mock_mimi.decode.side_effect = mock_decode
 
         mock_get_mimi.return_value = mock_mimi

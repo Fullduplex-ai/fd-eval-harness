@@ -1,43 +1,35 @@
-"""Shared result and event types for v0.1 reference tasks.
+"""Shared event types for v0.1 reference tasks.
 
-These types are intentionally task-local rather than core-wide. The core
-module exposes the abstract ``PredictionEvent`` and ``Task`` contracts;
-the concrete event subclasses and the ``TaskResult`` return shape live
-under ``fd_eval.tasks`` while the ``evaluate()`` signature is still being
-finalized (expected in D011). Once stable, these may be promoted into
-``fd_eval.core``.
+``TaskResult`` was promoted to ``fd_eval.core`` by D011 so third-party
+task plugins can import the return shape from the public core surface.
+This module re-exports it for backward compatibility with in-tree
+imports that reached here before the promotion.
+
+The concrete event subclasses below stay task-local: they are event
+shapes specific to each task's semantics, and promoting them would force
+the core to ship a taxonomy of event kinds it does not need to own.
 
 Note on ``@dataclass`` vs ``@dataclass(frozen=True)``:
 ``PredictionEvent`` in the core is an unfrozen dataclass, and Python's
 dataclass machinery forbids a frozen subclass of an unfrozen parent. The
-event subclasses below therefore inherit the unfrozen stance. ``TaskResult``
-has no such constraint and is frozen for safety.
+event subclasses below therefore inherit the unfrozen stance.
 """
 
 from __future__ import annotations
 
-from dataclasses import dataclass, field
+from dataclasses import dataclass
 from typing import Literal
 
-from fd_eval.core import PredictionEvent
+from fd_eval.core import PredictionEvent, TaskResult
+
+__all__ = [
+    "TaskResult",
+    "TurnTakingEventKind",
+    "TurnTakingPredictionEvent",
+    "VADPredictionEvent",
+]
 
 TurnTakingEventKind = Literal["onset", "offset"]
-
-
-@dataclass(frozen=True)
-class TaskResult:
-    """Uniform return type for ``Task.evaluate``.
-
-    ``score`` is the task's single primary number (for VAD: F1; for
-    turn-taking latency: mean latency in seconds). ``details`` carries
-    the secondary metrics a reader would want in a per-run report
-    (precision, recall, median, P95, count buckets, etc.). Keeping the
-    shape flat avoids committing to a deeper schema before we have more
-    than two reference tasks to generalize over.
-    """
-
-    score: float
-    details: dict[str, float | int | str] = field(default_factory=dict)
 
 
 @dataclass
