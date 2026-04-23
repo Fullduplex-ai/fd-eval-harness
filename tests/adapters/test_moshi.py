@@ -6,6 +6,7 @@ import pytest
 from fd_eval.adapters import MoshiAdapter
 from fd_eval.adapters.moshi import MoshiPredictionEvent
 from fd_eval.core import AudioSession
+from fd_eval.tasks._types import TurnTakingPredictionEvent, VADPredictionEvent
 
 
 @pytest.fixture
@@ -22,6 +23,16 @@ def mock_moshi_dependencies():
         mock_mimi = MagicMock()
         mock_mimi.frame_size = 1920
         mock_mimi.encode.return_value = MagicMock()
+
+        call_counter = 0
+        def mock_decode(*args, **kwargs):
+            nonlocal call_counter
+            import torch
+            res = torch.ones((1, 1, 1920)) if call_counter % 2 == 0 else torch.zeros((1, 1, 1920))
+            call_counter += 1
+            return res
+        mock_mimi.decode.side_effect = mock_decode
+
         mock_get_mimi.return_value = mock_mimi
 
         # Mock moshi
@@ -77,3 +88,57 @@ def test_moshi_adapter_participant_mode(mock_moshi_dependencies):
 
     assert mock_mimi.encode.call_count == 2
     assert mock_lmgen.step.call_count == 2
+
+
+def test_moshi_adapter_emit_turn_taking(mock_moshi_dependencies):
+    _mock_mimi, _mock_lmgen = mock_moshi_dependencies
+
+    adapter = MoshiAdapter(voice="moshika", emit_as="turn_taking")
+    audio = np.zeros((3840, 2))
+    session = AudioSession(
+        audio=audio,
+        sample_rate=24000,
+        input_channel_indices=[0],
+        target_channel_indices=[1],
+    )
+
+    stream = adapter.process(session)
+    events = list(stream)
+
+    assert len(events) == 2
+    assert isinstance(events[0], TurnTakingPredictionEvent)
+    assert events[0].event_kind == "onset"
+    assert events[0].timestamp_s == 0.0
+    assert events[0].channel == 1
+
+    assert isinstance(events[1], TurnTakingPredictionEvent)
+    assert events[1].event_kind == "offset"
+    assert events[1].timestamp_s == 0.08
+    assert events[1].channel == 1
+
+
+def test_moshi_adapter_emit_vad(mock_moshi_dependencies):
+    _mock_mimi, _mock_lmgen = mock_moshi_dependencies
+
+    adapter = MoshiAdapter(voice="moshiko", emit_as="vad")
+    audio = np.zeros((3840, 2))
+    session = AudioSession(
+        audio=audio,
+        sample_rate=24000,
+        input_channel_indices=[0],
+        target_channel_indices=[1],
+    )
+
+    stream = adapter.process(session)
+    events = list(stream)
+
+    assert len(events) == 2
+    assert isinstance(events[0], VADPredictionEvent)
+    assert events[0].is_speech is True
+    assert events[0].timestamp_s == 0.0
+    assert events[0].channel == 1
+
+    assert isinstance(events[1], VADPredictionEvent)
+    assert events[1].is_speech is False
+    assert events[1].timestamp_s == 0.08
+    assert events[1].channel == 1

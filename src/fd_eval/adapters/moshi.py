@@ -4,6 +4,7 @@ from typing import Literal
 import numpy as np
 
 from fd_eval.core import AudioSession, FDModelAdapter, PredictionEvent, PredictionStream
+from fd_eval.tasks._types import TurnTakingPredictionEvent, VADPredictionEvent
 
 
 @dataclass
@@ -13,8 +14,13 @@ class MoshiPredictionEvent(PredictionEvent):
 
 
 class MoshiAdapter(FDModelAdapter):
-    def __init__(self, voice: Literal["moshiko", "moshika"] = "moshika"):
+    def __init__(
+        self,
+        voice: Literal["moshiko", "moshika"] = "moshika",
+        emit_as: Literal["raw", "turn_taking", "vad"] = "raw",
+    ):
         self.voice = voice
+        self.emit_as = emit_as
         self.mimi = None
         self.moshi = None
         self.lm_gen = None
@@ -59,6 +65,8 @@ class MoshiAdapter(FDModelAdapter):
             raise ValueError("MoshiAdapter requires at least one input channel.")
 
         in_ch = session.input_channel_indices[0]
+        target_ch = session.target_channel_indices[0] if session.target_channel_indices else 0
+        _was_speech = False
 
         # 80ms chunk = 1920 samples at 24kHz
         frame_size = self.mimi.frame_size
@@ -78,16 +86,50 @@ class MoshiAdapter(FDModelAdapter):
                 codes = self.mimi.encode(user_audio_tensor)
                 tokens_out = self.lm_gen.step(codes)
 
+                timestamp_s = (i * frame_size) / session.sample_rate
+
                 text_token = None
                 audio_codes = None
+                is_speech = False
 
                 if tokens_out is not None:
                     # tokens_out is [B, 1 + 8, 1]
                     text_token = tokens_out[0, 1, 0].item()
                     audio_codes = tokens_out[0, 1:, 0].cpu().numpy()
 
-                timestamp_s = (i * frame_size) / session.sample_rate
+                    if self.emit_as != "raw":
+                        codes_tensor = (
+                            torch.from_numpy(audio_codes.astype(np.int64))
+                            .unsqueeze(0)
+                            .unsqueeze(-1)
+                            .to(self.device)
+                        )
+                        wav_chunk = self.mimi.decode(codes_tensor)
+                        rms = torch.sqrt(torch.mean(wav_chunk**2)).item()
+                        is_speech = rms > 0.01
 
-                yield MoshiPredictionEvent(
-                    timestamp_s=timestamp_s, text_token=text_token, audio_codes=audio_codes
-                )
+                if self.emit_as != "raw":
+                    if is_speech and not _was_speech:
+                        _was_speech = True
+                        if self.emit_as == "turn_taking":
+                            yield TurnTakingPredictionEvent(
+                                timestamp_s=timestamp_s, channel=target_ch, event_kind="onset"
+                            )
+                        elif self.emit_as == "vad":
+                            yield VADPredictionEvent(
+                                timestamp_s=timestamp_s, channel=target_ch, is_speech=True
+                            )
+                    elif not is_speech and _was_speech:
+                        _was_speech = False
+                        if self.emit_as == "turn_taking":
+                            yield TurnTakingPredictionEvent(
+                                timestamp_s=timestamp_s, channel=target_ch, event_kind="offset"
+                            )
+                        elif self.emit_as == "vad":
+                            yield VADPredictionEvent(
+                                timestamp_s=timestamp_s, channel=target_ch, is_speech=False
+                            )
+                else:
+                    yield MoshiPredictionEvent(
+                        timestamp_s=timestamp_s, text_token=text_token, audio_codes=audio_codes
+                    )
