@@ -49,14 +49,17 @@ Licensed under Apache-2.0.
 ```bash
 pip install fd-eval-harness
 
-fd-eval run \
-  --model local-hf-model:kyutai/moshiko-pytorch-bf16 \
-  --tasks voice-activity-detection,speaker-change-detection,laughter-detection \
-  --data path/to/session \
+fd-eval \
+  --tasks voice_activity_detection \
+  --adapter energy_vad \
+  --in-channels 0,1 \
+  --tgt-channels "" \
+  --audio-path path/to/session.wav \
+  --labels-path path/to/labels.json \
   --output results.json
 ```
 
-See `--help` for the full CLI.
+For programmatic execution in Python, see [`examples/run_evaluation_programmatically.py`](examples/run_evaluation_programmatically.py).
 
 ## Documentation
 
