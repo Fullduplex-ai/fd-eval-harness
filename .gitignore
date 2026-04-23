@@ -1,0 +1,49 @@
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+.coverage
+.coverage.*
+coverage.xml
+htmlcov/
+.pytest_cache/
+.ruff_cache/
+.mypy_cache/
+.tox/
+*.egg-info/
+dist/
+build/
+
+# Virtual environments
+.venv/
+.venv*/
+venv/
+env/
+ENV/
+
+# Editor / OS cruft
+.DS_Store
+Thumbs.db
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# Multi-agent collaboration workspace (local only, not for GitHub)
+_internal/
+
+# Secrets
+.env
+.env.*
+!.env.example
+
+# Build artifacts
+*.log
+
+# Jupyter
+.ipynb_checkpoints/
+
+# Type checkers
+.pytype/

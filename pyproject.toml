@@ -1,0 +1,102 @@
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[project]
+name = "fd-eval-harness"
+version = "0.1.0.dev0"
+description = "Evaluation harness for full-duplex speech-to-speech (FD STS) models"
+readme = "README.md"
+requires-python = ">=3.11"
+license = { text = "Apache-2.0" }
+authors = [
+  { name = "Fullduplex.ai", email = "hello@fullduplex.ai" },
+]
+keywords = [
+  "speech",
+  "evaluation",
+  "benchmark",
+  "full-duplex",
+  "audio",
+  "speech-to-speech",
+]
+classifiers = [
+  "Development Status :: 1 - Planning",
+  "License :: OSI Approved :: Apache Software License",
+  "Intended Audience :: Science/Research",
+  "Intended Audience :: Developers",
+  "Programming Language :: Python :: 3",
+  "Programming Language :: Python :: 3.11",
+  "Programming Language :: Python :: 3.12",
+  "Topic :: Scientific/Engineering :: Artificial Intelligence",
+  "Topic :: Multimedia :: Sound/Audio :: Analysis",
+]
+dependencies = [
+  "numpy>=1.24",
+  "soundfile>=0.12",
+  "pyyaml>=6.0",
+  "moshi",
+]
+
+[project.optional-dependencies]
+dev = [
+  "pytest>=7",
+  "pytest-cov>=4",
+  "ruff>=0.4",
+]
+hf = [
+  "torch>=2.0",
+  "transformers>=4.40",
+  "librosa>=0.10",
+]
+
+[project.scripts]
+fd-eval = "fd_eval.cli:main"
+
+[project.entry-points."fd_eval.tasks"]
+# Example task plugins will be registered here once implemented.
+# voice_activity_detection = "fd_eval.tasks.voice_activity:VoiceActivityDetection"
+
+[project.entry-points."fd_eval.adapters"]
+# Example adapter plugins will be registered here once implemented.
+# local-hf-model = "fd_eval.adapters.local_hf:LocalHFModelAdapter"
+
+[project.urls]
+Homepage = "https://github.com/fullduplexai/fd-eval-harness"
+Documentation = "https://github.com/fullduplexai/fd-eval-harness/tree/main/docs"
+Repository = "https://github.com/fullduplexai/fd-eval-harness"
+Issues = "https://github.com/fullduplexai/fd-eval-harness/issues"
+
+[tool.hatch.build.targets.wheel]
+packages = ["src/fd_eval"]
+
+[tool.ruff]
+line-length = 100
+target-version = "py311"
+src = ["src", "tests"]
+
+[tool.ruff.lint]
+select = [
+  "E",    # pycodestyle errors
+  "W",    # pycodestyle warnings
+  "F",    # pyflakes
+  "I",    # isort
+  "N",    # pep8-naming
+  "UP",   # pyupgrade
+  "B",    # flake8-bugbear
+  "SIM",  # flake8-simplify
+  "RUF",  # ruff-specific rules
+]
+ignore = []
+
+[tool.ruff.lint.per-file-ignores]
+"tests/*" = ["B011"]
+
+[tool.ruff.format]
+quote-style = "double"
+indent-style = "space"
+
+[tool.pytest.ini_options]
+addopts = "--cov=fd_eval --cov-report=term-missing --cov-branch"
+testpaths = ["tests"]
+python_files = ["test_*.py"]
