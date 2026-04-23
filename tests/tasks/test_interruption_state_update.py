@@ -100,7 +100,7 @@ def test_interruption_state_update_failure(session):
 
 
 def test_interruption_state_update_invalid_model():
-    with pytest.raises(ValueError, match="Floating model alias 'gpt-4o' is prohibited"):
+    with pytest.raises(ValueError, match="Judge model must end with a date suffix"):
         InterruptionStateUpdate(judge_model="gpt-4o")
 
 

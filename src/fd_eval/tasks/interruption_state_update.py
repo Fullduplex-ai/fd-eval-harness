@@ -51,19 +51,26 @@ class InterruptionStateUpdate(Task):
             judge_model: The exact version-pinned model to use for the judge.
         """
         # Enforce version locking per D015
-        if judge_model == "gpt-4o":
+        import re
+
+        _date_suffix_re = re.compile(r"-\d{4}-\d{2}-\d{2}$")
+        if not _date_suffix_re.search(judge_model):
             raise ValueError(
-                "Floating model alias 'gpt-4o' is prohibited for judge models. "
-                "Must use a date-pinned version (e.g., 'gpt-4o-2024-05-13')."
+                f"Judge model must end with a date suffix like '-2024-05-13'. Got: {judge_model!r}"
             )
         self.judge_model = judge_model
+        self._client = None
 
-        if openai is None:
-            raise ImportError(
-                "The 'openai' package is required for llm-judge tasks. "
-                "Install it with `pip install fd-eval-harness[llm-judge]`."
-            )
-        self.client = openai.Client()
+    @property
+    def client(self):
+        if self._client is None:
+            if openai is None:
+                raise ImportError(
+                    "The 'openai' package is required for llm-judge tasks. "
+                    "Install it with `pip install fd-eval-harness[llm-judge]`."
+                )
+            self._client = openai.Client()
+        return self._client
 
     def parse_references(self, raw_labels: list[dict]) -> Sequence[InterruptionReference]:
         refs = []
