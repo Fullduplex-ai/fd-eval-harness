@@ -2,7 +2,6 @@ import json
 from pathlib import Path
 
 import numpy as np
-import soundfile as sf
 
 
 def load_audio(path: str | Path) -> tuple[np.ndarray, int]:
@@ -15,6 +14,8 @@ def load_audio(path: str | Path) -> tuple[np.ndarray, int]:
     sample_rate : int
         Sample rate.
     """
+    import soundfile as sf
+
     audio, sr = sf.read(str(path), dtype="float32", always_2d=True)
     return audio, sr
 

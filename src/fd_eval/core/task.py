@@ -12,6 +12,11 @@ class Task(ABC):
     def __init_subclass__(cls, **kwargs):
         super().__init_subclass__(**kwargs)
 
+        if not hasattr(cls, "version") or not isinstance(cls.version, str):
+            raise ValueError(
+                f"Task subclass {cls.__name__} must define 'version' as a str (e.g., version = '0.1.0')."
+            )
+
         if not hasattr(cls, "scoring_method"):
             raise ValueError(f"Task subclass {cls.__name__} must define 'scoring_method'.")
 

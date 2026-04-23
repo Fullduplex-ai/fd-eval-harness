@@ -4,7 +4,7 @@
 
 `fd-eval-harness` is not another benchmark. It is a benchmark-agnostic executor that helps voice AI teams measure real-time conversation quality in a reproducible way. Instead of building a custom evaluation stack for each model, teams can run shared tests for interruption handling, turn-taking, and tool use, letting many benchmarks test many models in one consistent way.
 
-## Installation
+## Development Install
 
 Requires Python 3.11+.
 
@@ -15,6 +15,9 @@ python -m venv .venv
 source .venv/bin/activate
 pip install -e '.[dev]'
 ```
+
+> [!WARNING]
+> You must run `pip install -e .` (or `.[dev]`) to test the harness. Running `pytest` purely via `PYTHONPATH=.` will cause tests relying on plugin registry (`entry_points`) to fail, as the entry points are only registered upon package installation.
 
 ## Usage
 
