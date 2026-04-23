@@ -129,6 +129,12 @@ Output a JSON object with two fields:
         predictions: PredictionStream,
         references: Sequence[InterruptionReference],
     ) -> TaskResult:
+        """Evaluate the predictions against references.
+
+        Note: This task currently assumes 1 session = 1 interruption reference.
+        If multiple references are provided, they are evaluated independently
+        against the full transcript and their scores are averaged.
+        """
         if not references:
             return TaskResult(score=0.0, details={"error": "No references provided."})
 

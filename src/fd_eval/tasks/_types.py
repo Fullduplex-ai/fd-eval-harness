@@ -17,7 +17,7 @@ event subclasses below therefore inherit the unfrozen stance.
 
 from __future__ import annotations
 
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from typing import Literal
 
 from fd_eval.core import PredictionEvent, TaskResult
@@ -75,11 +75,7 @@ class ToolCallPredictionEvent(PredictionEvent):
 
     channel: int = 0
     tool_name: str = ""
-    arguments: dict = None  # type: ignore
-
-    def __post_init__(self):
-        if self.arguments is None:
-            self.arguments = {}
+    arguments: dict = field(default_factory=dict)
 
 
 @dataclass
