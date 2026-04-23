@@ -54,12 +54,12 @@ hf = [
 fd-eval = "fd_eval.cli:main"
 
 [project.entry-points."fd_eval.tasks"]
-# Example task plugins will be registered here once implemented.
-# voice_activity_detection = "fd_eval.tasks.voice_activity:VoiceActivityDetection"
+voice_activity_detection = "fd_eval.tasks.voice_activity:VoiceActivityDetection"
+turn_taking_latency = "fd_eval.tasks.turn_taking_latency:TurnTakingLatency"
 
 [project.entry-points."fd_eval.adapters"]
-# Example adapter plugins will be registered here once implemented.
-# local-hf-model = "fd_eval.adapters.local_hf:LocalHFModelAdapter"
+moshi = "fd_eval.adapters.moshi:MoshiAdapter"
+energy_vad = "fd_eval.adapters.energy_vad:EnergyVADAdapter"
 
 [project.urls]
 Homepage = "https://github.com/fullduplexai/fd-eval-harness"
