@@ -6,16 +6,22 @@ a new one when the user interrupts it mid-turn.
 
 from __future__ import annotations
 
+import hashlib
 import json
 import logging
+import re
+import time
 from collections.abc import Sequence
 from dataclasses import dataclass
+from pathlib import Path
 from typing import Any
 
 from fd_eval.core import AudioSession, PredictionStream, Task, TaskResult
 from fd_eval.tasks._types import TranscriptPredictionEvent
 
 logger = logging.getLogger(__name__)
+
+_DATE_SUFFIX_RE = re.compile(r"-\d{4}-\d{2}-\d{2}$")
 
 try:
     import openai
@@ -51,10 +57,7 @@ class InterruptionStateUpdate(Task):
             judge_model: The exact version-pinned model to use for the judge.
         """
         # Enforce version locking per D015
-        import re
-
-        _date_suffix_re = re.compile(r"-\d{4}-\d{2}-\d{2}$")
-        if not _date_suffix_re.search(judge_model):
+        if not _DATE_SUFFIX_RE.search(judge_model):
             raise ValueError(
                 f"Judge model must end with a date suffix like '-2024-05-13'. Got: {judge_model!r}"
             )
@@ -88,47 +91,56 @@ class InterruptionStateUpdate(Task):
             )
         return refs
 
-    def _call_judge(self, reference: InterruptionReference, transcript: str) -> dict[str, Any]:
+    def _call_judge(
+        self, reference: InterruptionReference, transcript: str, prompt_template: str
+    ) -> dict[str, Any]:
         """Call the LLM judge and return the structured JSON output."""
-        prompt = f"""You are an expert evaluator of conversational AI agents.
-
-The user interacted with the AI agent.
-First, the user gave this instruction:
-"{reference.initial_instruction}"
-
-Then, at {reference.interrupted_at_s}s, the user interrupted the agent and gave a new instruction:
-"{reference.final_instruction}"
-
-Here is the transcript of what the AI agent said after the interruption:
-"{transcript}"
-
-Did the AI agent successfully abandon the initial instruction and correctly follow
-the final instruction?
-Output a JSON object with two fields:
-- "reasoning": A step-by-step chain of thought explaining your judgment.
-- "score": 1.0 if the agent successfully followed the new instruction, 0.0 otherwise.
-"""
-        response = self.client.chat.completions.create(
-            model=self.judge_model,
-            messages=[{"role": "user", "content": prompt}],
-            response_format={"type": "json_object"},
-            temperature=0.0,
+        prompt = prompt_template.format(
+            initial_instruction=reference.initial_instruction,
+            interrupted_at_s=reference.interrupted_at_s,
+            final_instruction=reference.final_instruction,
+            transcript=transcript,
         )
 
-        content = response.choices[0].message.content
-        if not content:
-            raise ValueError("Judge returned empty response.")
+        max_retries = 3
+        base_wait = 1.0
 
-        usage = response.usage
-        tokens = (
-            {"prompt_tokens": usage.prompt_tokens, "completion_tokens": usage.completion_tokens}
-            if usage
-            else {}
-        )
+        for attempt in range(max_retries):
+            try:
+                response = self.client.chat.completions.create(
+                    model=self.judge_model,
+                    messages=[{"role": "user", "content": prompt}],
+                    response_format={"type": "json_object"},
+                    temperature=0.0,
+                )
 
-        result = json.loads(content)
-        result["tokens"] = tokens
-        return result
+                content = response.choices[0].message.content
+                if not content:
+                    raise ValueError("Judge returned empty response.")
+
+                usage = response.usage
+                tokens = (
+                    {
+                        "prompt_tokens": usage.prompt_tokens,
+                        "completion_tokens": usage.completion_tokens,
+                    }
+                    if usage
+                    else {}
+                )
+
+                result = json.loads(content)
+                result["tokens"] = tokens
+                return result
+            except (openai.APITimeoutError, openai.APIConnectionError):
+                if attempt == max_retries - 1:
+                    raise
+                time.sleep(base_wait * (2**attempt))
+            except json.JSONDecodeError as e:
+                raise ValueError(f"Judge returned malformed JSON: {e}") from e
+            except Exception:
+                raise
+
+        raise RuntimeError("Unreachable")
 
     def evaluate(
         self,
@@ -153,15 +165,21 @@ Output a JSON object with two fields:
 
         full_transcript = " ".join(transcript_parts).strip()
 
+        prompt_path = Path(__file__).parents[1] / "prompts" / "interruption_state_update.md"
+        with open(prompt_path, encoding="utf-8") as f:
+            prompt_template = f.read()
+        prompt_hash = hashlib.sha256(prompt_template.encode("utf-8")).hexdigest()
+
         scores = []
         total_prompt_tokens = 0
         total_completion_tokens = 0
+        judge_errors = 0
 
         # For simplicity, we assume one reference per session (common for this task type).
         # If there are multiple, we average them.
         for ref in references:
             try:
-                judge_out = self._call_judge(ref, full_transcript)
+                judge_out = self._call_judge(ref, full_transcript, prompt_template)
                 score = float(judge_out.get("score", 0.0))
                 scores.append(score)
 
@@ -170,16 +188,18 @@ Output a JSON object with two fields:
                 total_completion_tokens += tokens.get("completion_tokens", 0)
             except Exception as e:
                 logger.error(f"LLM Judge failed: {e}")
-                scores.append(0.0)
+                judge_errors += 1
 
         final_score = sum(scores) / len(scores) if scores else 0.0
 
         return TaskResult(
             score=final_score,
             details={
+                "prompt_hash": prompt_hash,
                 "prompt_tokens": total_prompt_tokens,
                 "completion_tokens": total_completion_tokens,
                 "num_judgments": len(scores),
+                "judge_errors": judge_errors,
                 "transcript_length": len(full_transcript),
             },
         )

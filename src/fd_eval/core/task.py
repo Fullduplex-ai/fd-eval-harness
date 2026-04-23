@@ -39,5 +39,8 @@ class Task(ABC):
 
         By default, returns the raw list. Subclasses should override this
         to validate and instantiate their specific reference dataclasses.
+
+        Returned objects must be `dataclass` instances or otherwise
+        JSON-serializable by the core reporter.
         """
         return raw_labels
