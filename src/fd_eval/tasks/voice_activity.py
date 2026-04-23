@@ -48,6 +48,8 @@ class VoiceActivityDetection(Task):
         event boundaries.
     """
 
+    name = "voice_activity_detection"
+    version = "0.1.0"
     mode = "observer"
     scoring_method = "algorithmic"
 
@@ -55,6 +57,19 @@ class VoiceActivityDetection(Task):
         if tolerance_s < 0:
             raise ValueError(f"tolerance_s must be non-negative, got {tolerance_s}")
         self.tolerance_s = tolerance_s
+
+    def parse_references(self, raw_labels: list[dict]) -> Sequence[VADReferenceEvent]:
+        refs = []
+        for d in raw_labels:
+            if "timestamp_s" in d and "channel" in d and "is_speech" in d:
+                refs.append(
+                    VADReferenceEvent(
+                        timestamp_s=float(d["timestamp_s"]),
+                        channel=int(d["channel"]),
+                        is_speech=bool(d["is_speech"]),
+                    )
+                )
+        return refs
 
     def evaluate(
         self,

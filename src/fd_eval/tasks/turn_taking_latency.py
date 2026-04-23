@@ -55,6 +55,8 @@ class TurnTakingLatency(Task):
         models enough room to be scored rather than dismissed as misses.
     """
 
+    name = "turn_taking_latency"
+    version = "0.1.0"
     mode = "participant"
     scoring_method = "algorithmic"
 
@@ -62,6 +64,20 @@ class TurnTakingLatency(Task):
         if max_latency_s <= 0:
             raise ValueError(f"max_latency_s must be positive, got {max_latency_s}")
         self.max_latency_s = max_latency_s
+
+    def parse_references(self, raw_labels: list[dict]) -> Sequence[PartnerOffsetReference]:
+        refs = []
+        for d in raw_labels:
+            if "timestamp_s" in d and "channel" in d:
+                # We could filter by "event_kind" == "partner_offset" if we establish
+                # a strict schema, but for v0.1 we simply extract the fields.
+                refs.append(
+                    PartnerOffsetReference(
+                        timestamp_s=float(d["timestamp_s"]),
+                        channel=int(d["channel"]),
+                    )
+                )
+        return refs
 
     def evaluate(
         self,

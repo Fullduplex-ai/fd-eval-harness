@@ -1,5 +1,6 @@
 from abc import ABC
-from typing import Literal, get_args
+from collections.abc import Sequence
+from typing import Any, Literal, get_args
 
 ScoringMethod = Literal["algorithmic", "llm-judge", "human-mos", "hybrid", "other"]
 
@@ -26,3 +27,11 @@ class Task(ABC):
                 f"Task subclass {cls.__name__} specified scoring_method='other' but "
                 "failed to provide 'scoring_method_detail'."
             )
+
+    def parse_references(self, raw_labels: list[dict]) -> Sequence[Any]:
+        """Parse raw JSON dictionaries into the task's specific reference type.
+
+        By default, returns the raw list. Subclasses should override this
+        to validate and instantiate their specific reference dataclasses.
+        """
+        return raw_labels

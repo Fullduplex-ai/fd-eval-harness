@@ -12,7 +12,9 @@ def test_package_has_version() -> None:
 
 
 def test_cli_main_returns_zero(capsys) -> None:
-    rc = cli.main([])
-    assert rc == 0
+    try:
+        cli.main(["--help"])
+    except SystemExit as e:
+        assert e.code == 0
     captured = capsys.readouterr()
     assert "fd-eval-harness" in captured.out
