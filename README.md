@@ -1,6 +1,8 @@
 # fd-eval-harness
 
-**Evaluation harness for full-duplex speech-to-speech (FD STS) models.**
+**A shared execution layer for full duplex voice evaluation.**
+
+`fd-eval-harness` is not another benchmark. It is a benchmark-agnostic executor that helps voice AI teams measure real-time conversation quality in a reproducible way. Instead of building a custom evaluation stack for each model, teams can run shared tests for interruption handling, turn-taking, and tool use, letting many benchmarks test many models in one consistent way.
 
 ## Installation
 
@@ -16,11 +18,7 @@ pip install -e '.[dev]'
 
 ## Usage
 
-The harness provides a benchmark-agnostic evaluation pipeline for full-duplex models. It supports both **Observer Mode** (listening to a pre-recorded conversation) and **Participant Mode** (interacting as one of the speakers).
-
-*(More detailed usage instructions and examples will be added as v0.1 is finalized.)*
-
-A benchmark-agnostic executor. Specific benchmark task suites are distributed as separate plugin packages.
+The harness provides a standardized evaluation pipeline for full-duplex models. It supports both **Observer Mode** (listening to a pre-recorded conversation) and **Participant Mode** (interacting as one of the speakers).
 
 Think of this as the streaming-audio sibling of EleutherAI's [lm-evaluation-harness](https://github.com/EleutherAI/lm-evaluation-harness). Just as `lm-eval-harness` became the de facto executor for language model benchmarks, `fd-eval-harness` aims to become the shared executor for full-duplex voice model benchmarks.
 

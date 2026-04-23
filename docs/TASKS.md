@@ -115,9 +115,25 @@ The v0.1 reference distribution includes **two** public-literature task plugins 
 
 These two tasks together exercise both modes and the two most common event-matching shapes (symmetric tolerance F1 for observer VAD; asymmetric forward-walk pairing for participant latency). The `scoring_method` declaration is uniform across v0.1 (`"algorithmic"`) because v0.1 scope does not include LLM-judge or human-MOS tasks.
 
-### Deferred to v0.2
+### Planned for v0.2+ (Business-Value Priorities)
 
-Three further observer tasks were in the earlier v0.1 plan and are deferred:
+Based on D014 (Positioning as a Shared Execution Layer), the harness prioritizes plugins that address critical failure modes in real-world conversational agents. The following participant-mode tasks are the immediate next targets for v0.2:
+
+#### 3. `interruption_state_update`
+- **Mode**: participant.
+- **Scoring method**: `llm-judge` (Evaluating the semantic correctness of the model's final response after the interruption).
+- **Goal**: Measure whether the model properly abandons an old instruction and follows a new one when the user interrupts it mid-turn.
+- **Business Value**: Demonstrates robustness against mid-turn context shifts, addressing a common and highly visible failure mode in full-duplex agents.
+
+#### 4. `tool_use_under_disfluency`
+- **Mode**: participant.
+- **Scoring method**: `algorithmic` (Exact or subset JSON matching of emitted tool-call payloads).
+- **Goal**: Measure if the model correctly emits a tool-call payload despite user hesitations, repetitions, or self-corrections mid-sentence.
+- **Business Value**: Connects voice evaluation directly to enterprise API execution reliability.
+
+#### Legacy Observer Tasks (Deferred)
+
+Three further observer tasks were in the earlier v0.1 plan and remain on the long-term roadmap:
 
 - `speaker_change_detection` — boundary-detection F1 on AMI / DIHARD III. Could produce a partial baseline with an energy-differential adapter on 2-channel audio, but requires its own reference adapter beyond `energy_vad`. Ship together with the v0.2 smarter observer.
 - `laughter_detection` — event-detection F1 on Switchboard / ICSI laughter subsets. Energy thresholding cannot distinguish speech from laughter; the resulting scores in v0.1 would be degenerate (empty stream or RMS-peak false positives). Needs a spectral or prosodic reference adapter.
