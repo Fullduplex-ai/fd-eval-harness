@@ -28,24 +28,26 @@ Scope: a minimum viable harness that runs a small set of demonstration tasks aga
 
 - Slice 7.1: `soundfile` lazy imports, `Task.version` interface enforcement, and documentation for development installs.
 
-## v0.2 Priorities (per D014)
+## Core v0.2 (Slice A, B, Realtime Adapter): Complete as of 2026-04-24
 
 Focus shifts to the "Shared Execution Layer" positioning, prioritizing high-business-value tasks over generic observer measurements.
 
-- **Slice A**: `tool_use_under_disfluency` (algorithmic scoring)
-  - Measure if the model correctly emits a tool-call payload despite user hesitations mid-sentence.
-- **Slice B**: `interruption_state_update` (llm-judge scoring) — **gated on D015 approval**
-  - Measure whether the model properly abandons an old instruction and follows a new one when interrupted.
-- **Prerequisite ADRs**:
+- **Completed Slices**:
+  - **Slice A**: `tool_use_under_disfluency` (algorithmic scoring)
+  - **Slice B**: `interruption_state_update` (llm-judge scoring)
+  - **Realtime API**: `OpenAIRealtimeAdapter` implementation
+
+- **ADRs Ratified**:
   - D013 (Task interface extensions)
+  - D014 (Shared Execution Layer)
   - D015 (LLM-as-judge scoring protocol)
+  - D016 (Real-Time Pacing & Server-Side VAD for Realtime API)
 
 ## Stretch (v0.3+)
 
 - Real-model smoke tests against actual Moshi checkpoints.
-- Real API adapters (OpenAI Realtime API, Google Gemini Live).
-- Streaming evaluation mode (`--streaming`).
 - Remote data loading (Hugging Face datasets).
+- Streaming evaluation mode (`--streaming`).
 - Multilingual task variants (e.g. Japanese backchannel taxonomy).
 
 ## Explicitly out of scope for core

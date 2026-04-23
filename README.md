@@ -43,7 +43,7 @@ A Python library and CLI that:
 
 ## Status
 
-Pre-alpha. v0.1 targeted for 2026-Q3.
+Pre-alpha. v0.3 targeted for 2026-Q3.
 
 Licensed under Apache-2.0.
 
