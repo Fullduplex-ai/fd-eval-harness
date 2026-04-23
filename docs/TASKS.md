@@ -97,39 +97,33 @@ Breaking changes to a task's scoring (different metric, different tolerance sema
 
 ## v0.1 reference tasks
 
-The v0.1 reference distribution includes five public-literature task plugins for demonstration. They are **not** a benchmark. They exist to prove the harness runs end-to-end in both modes (D009) and to serve as authoring examples.
+The v0.1 reference distribution includes **two** public-literature task plugins for demonstration, one per mode. They are **not** a benchmark. They exist to prove the harness runs end-to-end in both modes (D009) and to serve as authoring examples. The scope was narrowed from an earlier five-task plan; the reasoning and the list of deferred tasks is at the end of this section.
 
 ### 1. `voice_activity_detection`
 - **Mode**: observer.
 - **Scoring method**: `algorithmic` (event-detection F1 with configurable time tolerance).
 - **Reference dataset**: any two-channel conversation with per-channel speech/non-speech intervals. Public options: AMI (interval-aligned headset mix), CHiME-6 (with CHiME-6 style per-speaker VAD labels).
 - **Scope**: per-channel binary speech vs. non-speech detection. No classification of speech type.
+- **Reference adapter**: `energy_vad` (RMS-threshold-based observer adapter).
 
-### 2. `speaker_change_detection`
-- **Mode**: observer.
-- **Scoring method**: `algorithmic` (boundary-detection F1 with configurable time tolerance).
-- **Reference dataset**: any two-channel conversation with time-aligned speaker-turn boundaries. Public options: AMI, DIHARD III.
-- **Scope**: detection of the time instants where the active speaker changes. No speaker identification, no more-than-two-speaker handling.
-
-### 3. `laughter_detection`
-- **Mode**: observer.
-- **Scoring method**: `algorithmic` (event-detection F1 with configurable time tolerance).
-- **Reference dataset**: any conversational corpus with annotated laughter events. Public options: Switchboard laughter annotations (Trouvain 2014 subset), ICSI meeting laughter annotations.
-- **Scope**: binary presence/absence of laughter events, per channel. No categorization of laughter type (polite, genuine, etc.).
-
-### 4. `disfluency_detection`
-- **Mode**: observer.
-- **Scoring method**: `algorithmic` (event-detection F1 with configurable time tolerance).
-- **Reference dataset**: any conversational corpus with disfluency event annotations. Public options: Switchboard NXT disfluency annotations, CallHome disfluency subsets.
-- **Scope**: detection of filled pauses, repetitions, and repairs as a combined event class. Fine-grained sub-classification (per Shriberg 1994 taxonomy) is out of scope for v0.1.
-
-### 5. `turn_taking_latency`
+### 2. `turn_taking_latency`
 - **Mode**: participant (the single v0.1 participant task per D009).
 - **Scoring method**: `algorithmic` (timing-only, content-blind).
 - **Reference dataset**: any two-channel conversational corpus where the input-channel side can be played to the model and the target-channel onset can be measured. Public options: AMI headset mix, Switchboard two-channel recordings.
 - **Scope**: measure the time from end-of-speech on the input channel to first-audible-generation on the target channel. Does not score what the model said, only when it started saying it. Endpoint detection methodology and silence threshold are declared inside the plugin and recorded in `run.json`.
+- **Reference adapter**: `moshi` with `emit_as="turn_taking"` (Participant-Only per D012).
 
-These five tasks together exercise both modes, all channel-role combinations, and the two most common observer-style metric shapes (event F1 and boundary F1). The `scoring_method` declaration is uniform across v0.1 (`"algorithmic"`) because v0.1 scope does not include LLM-judge or human-MOS tasks.
+These two tasks together exercise both modes and the two most common event-matching shapes (symmetric tolerance F1 for observer VAD; asymmetric forward-walk pairing for participant latency). The `scoring_method` declaration is uniform across v0.1 (`"algorithmic"`) because v0.1 scope does not include LLM-judge or human-MOS tasks.
+
+### Deferred to v0.2
+
+Three further observer tasks were in the earlier v0.1 plan and are deferred:
+
+- `speaker_change_detection` — boundary-detection F1 on AMI / DIHARD III. Could produce a partial baseline with an energy-differential adapter on 2-channel audio, but requires its own reference adapter beyond `energy_vad`. Ship together with the v0.2 smarter observer.
+- `laughter_detection` — event-detection F1 on Switchboard / ICSI laughter subsets. Energy thresholding cannot distinguish speech from laughter; the resulting scores in v0.1 would be degenerate (empty stream or RMS-peak false positives). Needs a spectral or prosodic reference adapter.
+- `disfluency_detection` — event-detection F1 on Switchboard NXT / CallHome disfluency subsets. Same structural constraint as laughter: requires VUV or filled-pause-specific features. Fine-grained sub-classification per Shriberg 1994 taxonomy remains out of scope for v0.2 as well.
+
+All three remain on the long-term roadmap. The deferral is a scope decision, not a taxonomy change.
 
 ## Writing a plugin for a specific benchmark
 

@@ -8,18 +8,19 @@ Scope: a minimum viable harness that runs a small set of demonstration tasks aga
 
 ### v0.1 example task plugins (public-literature only)
 
-The v0.1 reference distribution ships a small set of public-literature task plugins, intended purely to prove the harness runs end-to-end. These are authoring examples, not a benchmark.
+The v0.1 reference distribution ships two public-literature task plugins, one per mode, intended purely to prove the harness runs end-to-end. These are authoring examples, not a benchmark. The scope was narrowed from an earlier five-task list to only those tasks for which a reference adapter can produce interpretable scores in v0.1 (see D009 and D012 in `_internal/DECISIONS.md`).
 
-- `voice_activity_detection`
-- `speaker_change_detection`
-- `laughter_detection`
-- `disfluency_detection`
+- `voice_activity_detection` — observer task paired with `energy_vad` reference adapter.
+- `turn_taking_latency` — participant task paired with `moshi` reference adapter (Participant-Only per D012).
 
 Benchmark-specific task suites (such as lab-authored evaluation taxonomies) are authored as separate plugin packages and are not part of the core harness distribution.
 
+Three further observer tasks (`speaker_change_detection`, `laughter_detection`, `disfluency_detection`) are **deferred to v0.2**. The energy-threshold reference adapter cannot produce meaningful baselines for laughter or disfluency (those require spectral or prosodic features), and shipping them in v0.1 would put empty-stream or all-flagged-trivial numbers into public run outputs. The deferral is a scope decision, not a taxonomy change: the tasks remain on the long-term roadmap.
+
 ### v0.1 model adapters
 
-- `local-hf-model` — real implementation, target: Kyutai Moshi open weights.
+- `moshi` — real implementation, target: Kyutai Moshi open weights. Participant Mode only (D012). Supports `emit_as="raw" | "turn_taking"` so a single process() stream can feed either raw model output or the `turn_taking_latency` task.
+- `energy_vad` — real implementation, lightweight energy-threshold observer adapter. Exists to exercise the Observer pipeline in v0.1.
 - `openai-realtime-api` — stub. Returns fixed mock outputs. Real API integration deferred to v0.2.
 
 ### v0.1 deliverables
@@ -48,7 +49,8 @@ Benchmark-specific task suites (such as lab-authored evaluation taxonomies) are 
 
 Scope expansion:
 
-- Expanded example task plugin set (additional public-literature tasks, numbers and titles to be decided during v0.2 planning).
+- Reinstatement of the three observer tasks deferred from v0.1: `speaker_change_detection`, `laughter_detection`, `disfluency_detection`. Requires a smarter reference observer adapter (spectral or VUV features) so the resulting scores are interpretable rather than degenerate.
+- Additional example task plugins beyond that reinstatement set (numbers and titles to be decided during v0.2 planning).
 - Streaming evaluation mode behind `--streaming` flag.
 - Real OpenAI Realtime API adapter.
 - Real Google Gemini Live adapter.
