@@ -131,15 +131,13 @@ Based on D014 (Positioning as a Shared Execution Layer), the harness prioritizes
 - **Goal**: Measure if the model correctly emits a tool-call payload despite user hesitations, repetitions, or self-corrections mid-sentence.
 - **Business Value**: Connects voice evaluation directly to enterprise API execution reliability.
 
-#### Legacy Observer Tasks (Deferred)
+#### Out of scope for fd-eval-harness core (welcomed as external plugins)
 
-Three further observer tasks were in the earlier v0.1 plan and remain on the long-term roadmap:
+Three further observer tasks were in the earlier v0.1 plan:
 
-- `speaker_change_detection` — boundary-detection F1 on AMI / DIHARD III. Could produce a partial baseline with an energy-differential adapter on 2-channel audio, but requires its own reference adapter beyond `energy_vad`. Ship together with the v0.2 smarter observer.
-- `laughter_detection` — event-detection F1 on Switchboard / ICSI laughter subsets. Energy thresholding cannot distinguish speech from laughter; the resulting scores in v0.1 would be degenerate (empty stream or RMS-peak false positives). Needs a spectral or prosodic reference adapter.
-- `disfluency_detection` — event-detection F1 on Switchboard NXT / CallHome disfluency subsets. Same structural constraint as laughter: requires VUV or filled-pause-specific features. Fine-grained sub-classification per Shriberg 1994 taxonomy remains out of scope for v0.2 as well.
-
-All three remain on the long-term roadmap. The deferral is a scope decision, not a taxonomy change.
+- `speaker_change_detection` — boundary-detection F1 on AMI / DIHARD III. Could produce a partial baseline with an energy-differential adapter on 2-channel audio, but requires its own reference adapter beyond `energy_vad`. The harness core will not carry bundled references for this task; it can be implemented by external benchmark plugins as needed.
+- `laughter_detection` — event-detection F1 on Switchboard / ICSI laughter subsets. Energy thresholding cannot distinguish speech from laughter; the resulting scores in v0.1 would be degenerate (empty stream or RMS-peak false positives). The harness core will not carry bundled references for this task; it can be implemented by external benchmark plugins as needed.
+- `disfluency_detection` — event-detection F1 on Switchboard NXT / CallHome disfluency subsets. Same structural constraint as laughter: requires VUV or filled-pause-specific features. The harness core will not carry bundled references for this task; it can be implemented by external benchmark plugins as needed.
 
 ## Writing a plugin for a specific benchmark
 
