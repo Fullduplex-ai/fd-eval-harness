@@ -24,6 +24,7 @@ from fd_eval.core import PredictionEvent, TaskResult
 
 __all__ = [
     "TaskResult",
+    "ToolCallPredictionEvent",
     "TurnTakingEventKind",
     "TurnTakingPredictionEvent",
     "VADPredictionEvent",
@@ -60,3 +61,21 @@ class TurnTakingPredictionEvent(PredictionEvent):
 
     channel: int = 0
     event_kind: TurnTakingEventKind = "onset"
+
+
+@dataclass
+class ToolCallPredictionEvent(PredictionEvent):
+    """Predicted tool call emitted by the model.
+
+    ``channel`` is the target channel on which the model generated this payload.
+    ``tool_name`` is the string identifier of the tool.
+    ``arguments`` is the JSON payload containing the arguments.
+    """
+
+    channel: int = 0
+    tool_name: str = ""
+    arguments: dict = None  # type: ignore
+
+    def __post_init__(self):
+        if self.arguments is None:
+            self.arguments = {}

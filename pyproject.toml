@@ -56,10 +56,12 @@ fd-eval = "fd_eval.cli:main"
 [project.entry-points."fd_eval.tasks"]
 voice_activity_detection = "fd_eval.tasks.voice_activity:VoiceActivityDetection"
 turn_taking_latency = "fd_eval.tasks.turn_taking_latency:TurnTakingLatency"
+tool_use_under_disfluency = "fd_eval.tasks.tool_use_under_disfluency:ToolUseUnderDisfluency"
 
 [project.entry-points."fd_eval.adapters"]
 moshi = "fd_eval.adapters.moshi:MoshiAdapter"
 energy_vad = "fd_eval.adapters.energy_vad:EnergyVADAdapter"
+tool_use_stub = "fd_eval.adapters.tool_use_stub:ToolUseStubAdapter"
 
 [project.urls]
 Homepage = "https://github.com/fullduplexai/fd-eval-harness"

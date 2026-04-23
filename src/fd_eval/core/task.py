@@ -14,7 +14,8 @@ class Task(ABC):
 
         if not hasattr(cls, "version") or not isinstance(cls.version, str):
             raise ValueError(
-                f"Task subclass {cls.__name__} must define 'version' as a str (e.g., version = '0.1.0')."
+                f"Task subclass {cls.__name__} must define 'version' as a str "
+                "(e.g., version = '0.1.0')."
             )
 
         if not hasattr(cls, "scoring_method"):
