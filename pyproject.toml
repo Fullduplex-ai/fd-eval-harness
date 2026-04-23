@@ -49,6 +49,9 @@ hf = [
   "transformers>=4.40",
   "librosa>=0.10",
 ]
+llm-judge = [
+  "openai>=1.0.0",
+]
 
 [project.scripts]
 fd-eval = "fd_eval.cli:main"
@@ -57,6 +60,7 @@ fd-eval = "fd_eval.cli:main"
 voice_activity_detection = "fd_eval.tasks.voice_activity:VoiceActivityDetection"
 turn_taking_latency = "fd_eval.tasks.turn_taking_latency:TurnTakingLatency"
 tool_use_under_disfluency = "fd_eval.tasks.tool_use_under_disfluency:ToolUseUnderDisfluency"
+interruption_state_update = "fd_eval.tasks.interruption_state_update:InterruptionStateUpdate"
 
 [project.entry-points."fd_eval.adapters"]
 moshi = "fd_eval.adapters.moshi:MoshiAdapter"

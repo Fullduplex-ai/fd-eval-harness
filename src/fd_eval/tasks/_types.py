@@ -25,6 +25,7 @@ from fd_eval.core import PredictionEvent, TaskResult
 __all__ = [
     "TaskResult",
     "ToolCallPredictionEvent",
+    "TranscriptPredictionEvent",
     "TurnTakingEventKind",
     "TurnTakingPredictionEvent",
     "VADPredictionEvent",
@@ -79,3 +80,15 @@ class ToolCallPredictionEvent(PredictionEvent):
     def __post_init__(self):
         if self.arguments is None:
             self.arguments = {}
+
+
+@dataclass
+class TranscriptPredictionEvent(PredictionEvent):
+    """Predicted text transcript emitted by the model.
+
+    ``channel`` is the target channel on which the model generated this text.
+    ``text`` is the actual transcribed text string.
+    """
+
+    channel: int = 0
+    text: str = ""
