@@ -52,6 +52,9 @@ hf = [
 llm-judge = [
   "openai>=1.0.0",
 ]
+realtime = [
+  "websockets>=12.0",
+]
 
 [project.scripts]
 fd-eval = "fd_eval.cli:main"
