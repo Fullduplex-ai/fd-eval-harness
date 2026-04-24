@@ -98,7 +98,7 @@ _SAMPLES_UNAVAILABLE: dict[str, str] = {
 def _write_wav_two_channel_tone(
     audio_path: Path,
     *,
-    sr: int = 16000,
+    sr: int = 24000,
     duration_s: float = 2.0,
     ch0_window: tuple[float, float] = (0.5, 1.5),
     ch0_hz: float = 220.0,
