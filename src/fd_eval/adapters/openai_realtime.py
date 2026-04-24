@@ -34,7 +34,7 @@ class OpenAIRealtimeAdapter(FDModelAdapter):
 
     def __init__(
         self,
-        model: str = "gpt-4o-realtime-preview-2024-10-01",
+        model: str = "gpt-4o-realtime-preview",
         voice: str = "alloy",
         timeout_s: float = 10.0,
     ):
@@ -85,7 +85,7 @@ class OpenAIRealtimeAdapter(FDModelAdapter):
         }
         start_time = asyncio.get_event_loop().time()
         try:
-            async with websockets.connect(url, extra_headers=headers) as ws:
+            async with websockets.connect(url, additional_headers=headers) as ws:
                 # 1. Update session to use server_vad
                 await ws.send(
                     json.dumps(
@@ -104,7 +104,8 @@ class OpenAIRealtimeAdapter(FDModelAdapter):
                 sender_task = asyncio.create_task(self._send_audio(ws, session))
                 receiver_task = asyncio.create_task(self._receive_events(ws, q, start_time))
 
-                await asyncio.gather(sender_task, receiver_task)
+                await sender_task
+                receiver_task.cancel()
         except Exception as e:
             # Per D016 Edit 1: Network errors currently swallow exceptions
             # and return an empty stream.
@@ -138,8 +139,7 @@ class OpenAIRealtimeAdapter(FDModelAdapter):
             # D016 Real-time pacing
             await asyncio.sleep(chunk_ms / 1000.0)
 
-        # Commit to signal end of stream
-        await ws.send(json.dumps({"type": "input_audio_buffer.commit"}))
+        # In server_vad mode, the server auto-commits when it detects speech end.
 
         # Wait a bit to ensure the model's final response is received before closing
         await asyncio.sleep(self.timeout_s)
