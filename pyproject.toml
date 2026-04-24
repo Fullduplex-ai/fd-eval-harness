@@ -110,3 +110,6 @@ indent-style = "space"
 addopts = "--cov=fd_eval --cov-report=term-missing --cov-branch"
 testpaths = ["tests"]
 python_files = ["test_*.py"]
+markers = [
+    "network: marks tests that require network access to remote services (deselect with '-m \"not network\"')",
+]

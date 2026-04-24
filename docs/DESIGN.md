@@ -87,6 +87,9 @@ v0.1 input contract:
 
 An invariant enforced on `AudioSession` construction: input and target channel sets must be disjoint, and every declared index must be in range for the loaded audio (see D007 for rationale).
 
+**Remote Data Loading (v0.3):**
+The `fd_eval.data.remote` module exposes `download_hf_dataset`, which securely fetches dataset repositories from the Hugging Face Hub and caches them locally using `huggingface_hub.snapshot_download`. This eliminates the need to distribute `.wav` files directly in benchmark plugins. Once cached, the local directory path is returned, allowing seamless integration with the existing `load_audio` and `load_labels` offline loaders (see D017).
+
 ### 4.4 Scorer and Reporter
 
 `Scorer` combines per-task results into a session-level summary. `Reporter` writes the standardized JSON output.
@@ -211,7 +214,7 @@ Every `run.json` records:
 ## 12. Open design questions (resolve before v0.1 code starts)
 
 1. **Audio I/O library.** Recommendation: `soundfile` for load and save, `librosa` for resample only, `torchaudio` optional and lazy-imported. Open: confirm `soundfile` covers all WAV variants in the test fixture data.
-2. **Remote data loading.** Deferred to v0.3.
+2. **Remote data loading.** Solved for v0.3 via `fd_eval.data.remote` and Hugging Face Hub (D017).
 3. **Sample data in repo.** Only synthetic 5-second fixtures for tests. Real session data is distributed through benchmark plugin packages, not from this repo.
 4. **Task versioning.** Each task has its own `version` string independent of harness version. A task can reach v2.0.0 while the harness is still v0.1. The harness output records both.
 5. **Model license handling.** Some model licenses forbid benchmarking. Proposal: adapter authors declare the license string; the harness records it in output and prints a warning if the license is known-restrictive. The harness does not enforce license compliance; that is the researcher's responsibility.
