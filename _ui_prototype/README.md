@@ -1,8 +1,8 @@
 # fd-eval-harness — UI prototype
 
 Exploratory web console for trying `fd-eval-harness` without the CLI.
-Authored by Claude, separate from the Antigravity-owned `src/fd_eval/` code path.
-Not committed to git (gitignored under `_ui_prototype/`).
+Authored by Claude. Experimental, not part of the public API.
+Separate from the Antigravity-owned `src/fd_eval/` code path.
 
 ## What it does
 

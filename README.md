@@ -43,7 +43,7 @@ A Python library and CLI that:
 
 ## Status
 
-Pre-alpha. v0.3 targeted for 2026-Q3.
+v0.2 shipped (2026-04-24). Next: v0.3 (remote data loading, streaming evaluation, real-model smoke tests).
 
 Licensed under Apache-2.0.
 

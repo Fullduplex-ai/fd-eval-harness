@@ -153,7 +153,7 @@ Abbreviated for clarity. Full JSON Schema file lives at `fd_eval/schemas/run_v0.
 
 ## 7. Streaming vs batch
 
-v0.1 processes audio offline but exposes streaming-shaped interfaces so a streaming v0.2 can land without breaking callers. Two pieces of the public contract define this shape.
+v0.1 and v0.2 process audio offline but expose streaming-shaped interfaces so a true remote streaming mode (v0.3) can land without breaking callers. Two pieces of the public contract define this shape.
 
 **Audio chunk iterator on `AudioSession`** (see D006):
 
@@ -162,7 +162,7 @@ def stream(self, chunk_ms: int = 20) -> Iterator[np.ndarray]:
     """Yields audio in chunks of chunk_ms. Default 20ms matches typical FD STS frame rate."""
 ```
 
-Adapters that want the whole array at once use the `collect_all(session)` helper from `fd_eval.core.helpers`, which consumes the iterator and concatenates. Offline v0.1 adapters may use this escape hatch freely; a v0.2 streaming adapter consumes the iterator chunk-by-chunk without changing the caller's session construction.
+Adapters that want the whole array at once use the `collect_all(session)` helper from `fd_eval.core.helpers`, which consumes the iterator and concatenates. Offline adapters may use this escape hatch freely; streaming adapters like OpenAI Realtime consume the iterator chunk-by-chunk without changing the caller's session construction.
 
 **Prediction events** (see D005):
 
@@ -176,7 +176,7 @@ PredictionStream = Iterator[PredictionEvent]
 
 `PredictionStream` is a type alias, not a Protocol class. Concrete adapters yield `PredictionEvent` instances (or dataclass subclasses that extend `PredictionEvent` with task-specific fields such as `audio_chunk`, `label`, or `confidence`). Callers must treat the stream as forward-only and must not assume it is exhaustible, rewindable, or re-iterable.
 
-An offline adapter materializes all predictions first, then yields them. A streaming adapter (v0.2) yields incrementally as audio arrives. Callers must treat both identically.
+An offline adapter materializes all predictions first, then yields them. A streaming adapter (like OpenAI Realtime) yields incrementally as audio arrives. Callers must treat both identically.
 
 ## 8. Two-channel audio handling
 
@@ -211,12 +211,12 @@ Every `run.json` records:
 ## 12. Open design questions (resolve before v0.1 code starts)
 
 1. **Audio I/O library.** Recommendation: `soundfile` for load and save, `librosa` for resample only, `torchaudio` optional and lazy-imported. Open: confirm `soundfile` covers all WAV variants in the test fixture data.
-2. **Remote data loading.** v0.1 local-only. v0.2 adds Hugging Face datasets integration. Open: whether to include a minimal stub in v0.1 or defer entirely.
+2. **Remote data loading.** Deferred to v0.3.
 3. **Sample data in repo.** Only synthetic 5-second fixtures for tests. Real session data is distributed through benchmark plugin packages, not from this repo.
 4. **Task versioning.** Each task has its own `version` string independent of harness version. A task can reach v2.0.0 while the harness is still v0.1. The harness output records both.
 5. **Model license handling.** Some model licenses forbid benchmarking. Proposal: adapter authors declare the license string; the harness records it in output and prints a warning if the license is known-restrictive. The harness does not enforce license compliance; that is the researcher's responsibility.
 
-## 13. Structural decisions deferred to v0.2 or later
+## 13. Structural decisions deferred to v0.3 or later
 
 - Live streaming ingestion from API endpoints.
 - Leaderboard submission integration.
